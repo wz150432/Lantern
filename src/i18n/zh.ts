@@ -24,7 +24,7 @@ export const zh = {
     pageModePage: '翻页', pageModeScroll: '滚动', autoPageInterval: '自动翻页间隔(ms)',
     clickMode: '点击翻页方式', clickThirds: '左右区域', clickLeftRight: '左键下页/右键上页',
     scrollSpeed: '滚动速度', windowTopmost: '窗口置顶', windowOpacity: '窗口透明度',
-    immersiveMode: '沉浸模式（F12 隐藏顶栏/底栏）', pageDouble: '翻页双页（左右双页）', autoHideOnLeave: '鼠标移出自动隐藏（Ctrl+Shift+Alt+Delete 切换）', recording: '按新组合键…', hotkeysHint: '点击右侧按键后按下新的组合键即可录制（Esc 取消）', restoreDefault: '还原默认设置', about: '关于',
+    immersiveMode: '沉浸模式（F12 隐藏顶栏/底栏）', pageDouble: '翻页双页（左右双页）', autoHideOnLeave: '鼠标移出自动隐藏（Ctrl+Alt+Shift+P 切换）', recording: '按新组合键…', hotkeysHint: '点击右侧按键后按下新的组合键即可录制（Esc 取消）', restoreDefault: '还原默认设置', about: '关于',
     preview: '排版预览', resetConfirm: '确定要还原默认设置吗？',
     fontSystem: '系统默认', fontSerif: '思源宋体', fontNotoSerif: 'Noto Serif',
     previewChapter: '第一章 预览', previewBody: '这是排版预览文本，用于实时查看行距、段距、字号与首行缩进的效果。点击设置即刻生效。',

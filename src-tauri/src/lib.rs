@@ -39,7 +39,7 @@ pub fn run() {
                         }
                     } else if shortcut.matches(
                         Modifiers::CONTROL | Modifiers::SHIFT | Modifiers::ALT,
-                        Code::Delete,
+                        Code::KeyP,
                     ) {
                         if let Some(state) = app.try_state::<AppState>() {
                             let _ = commands::toggle_auto_hide_inner(&state);
@@ -66,10 +66,10 @@ pub fn run() {
             if let Err(e) = app.global_shortcut().register(shortcut) {
                 eprintln!("警告：Alt+H 全局快捷键注册失败（可能已被其它程序占用）：{e}");
             }
-            // Ctrl+Shift+Alt+Delete：切换“鼠标移出自动隐藏”
+            // Ctrl+Alt+Shift+P：切换“鼠标移出自动隐藏”
             let ah_shortcut = Shortcut::new(
                 Some(Modifiers::CONTROL | Modifiers::SHIFT | Modifiers::ALT),
-                Code::Delete,
+                Code::KeyP,
             );
             if let Err(e) = app.global_shortcut().register(ah_shortcut) {
                 eprintln!("警告：Ctrl+Shift+Alt+Delete 全局快捷键注册失败：{e}");

@@ -35,10 +35,12 @@ unsafe extern "system" {
 
 pub fn start(hwnd: usize, enabled: Arc<AtomicBool>) {
     std::thread::spawn(move || {
+        let mut visible_since: Option<std::time::Instant> = None;
         unsafe {
             loop {
                 std::thread::sleep(std::time::Duration::from_millis(150));
                 if !enabled.load(Ordering::Relaxed) {
+                    visible_since = None;
                     continue;
                 }
                 let mut pt = POINT { x: 0, y: 0 };
@@ -52,11 +54,28 @@ pub fn start(hwnd: usize, enabled: Arc<AtomicBool>) {
                 let inside = pt.x >= rc.left && pt.x <= rc.right && pt.y >= rc.top && pt.y <= rc.bottom;
                 let ctrl = (GetAsyncKeyState(VK_CONTROL) as u16 & 0x8000) != 0;
                 let visible = IsWindowVisible(hwnd as *const core::ffi::c_void) != 0;
-                if visible && !inside {
-                    ShowWindow(hwnd as *const core::ffi::c_void, SW_HIDE);
-                } else if !visible && inside && ctrl {
-                    ShowWindow(hwnd as *const core::ffi::c_void, SW_SHOW);
-                    SetForegroundWindow(hwnd as *const core::ffi::c_void);
+                let now = std::time::Instant::now();
+                if visible {
+                    if inside {
+                        visible_since = Some(now);
+                    } else {
+                        // 刚被手动唤回（Alt+H / Ctrl+光标）的窗口给 2 秒宽限，避免立刻又被隐藏
+                        match visible_since {
+                            Some(t) if now.duration_since(t) > std::time::Duration::from_secs(2) => {
+                                ShowWindow(hwnd as *const core::ffi::c_void, SW_HIDE);
+                            }
+                            _ => {
+                                visible_since = Some(now);
+                            }
+                        }
+                    }
+                } else {
+                    visible_since = None;
+                    if inside && ctrl {
+                        ShowWindow(hwnd as *const core::ffi::c_void, SW_SHOW);
+                        SetForegroundWindow(hwnd as *const core::ffi::c_void);
+                        visible_since = Some(now);
+                    }
                 }
             }
         }
