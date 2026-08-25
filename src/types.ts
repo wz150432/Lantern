@@ -32,6 +32,8 @@ export interface AppSettings {
   clickMode: 'thirds' | 'left-right'
   pageDouble: boolean
   windowTopmost: boolean
+  autoHideOnLeave: boolean
+  hotkeys: Record<string, string>
   windowOpacity: number
   immersiveMode: boolean
 }

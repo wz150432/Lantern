@@ -11,7 +11,28 @@ pub struct AppState {
     pub library: Mutex<Library>,
     pub sessions: Mutex<SessionManager>,
     pub settings: Mutex<AppSettings>,
+    pub auto_hide: std::sync::Arc<std::sync::atomic::AtomicBool>,
     pub data_dir: std::path::PathBuf,
+}
+
+pub fn toggle_auto_hide_inner(state: &AppState) -> AppResult<bool> {
+    let next = {
+        let mut settings = state.settings.lock().map_err(lock_error)?;
+        let next = !settings.auto_hide_on_leave;
+        settings.auto_hide_on_leave = next;
+        let snapshot = settings.clone();
+        drop(settings);
+        state
+            .library
+            .lock()
+            .map_err(lock_error)?
+            .save_settings(&snapshot)?;
+        next
+    };
+    state
+        .auto_hide
+        .store(next, std::sync::atomic::Ordering::Relaxed);
+    Ok(next)
 }
 
 fn lock_error<T>(_: std::sync::PoisonError<T>) -> AppError {
@@ -212,6 +233,11 @@ pub fn toggle_window_visible(window: Window) -> AppResult<()> {
         window.set_focus().map_err(|e| AppError::Invalid(e.to_string()))?;
     }
     Ok(())
+}
+
+#[tauri::command]
+pub fn toggle_auto_hide(state: tauri::State<'_, AppState>) -> AppResult<bool> {
+    toggle_auto_hide_inner(&state)
 }
 
 #[tauri::command]

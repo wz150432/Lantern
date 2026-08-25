@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSettingsStore } from '../stores/settings'
 import { THEME_PRESETS } from '../theme/theme'
@@ -7,6 +7,8 @@ import { zh } from '../i18n/zh'
 import * as ipc from '../ipc'
 import { ask } from '@tauri-apps/plugin-dialog'
 import type { AppSettings } from '../types'
+import { HOTKEY_ACTIONS, buildBindings, comboToText } from '../hotkeys/actions'
+import type { HotkeyAction } from '../hotkeys/actions'
 
 const router = useRouter()
 const settings = useSettingsStore()
@@ -22,6 +24,42 @@ const previewParagraphs = computed(() => {
 
 function patch(p: Partial<AppSettings>) {
   void settings.update(p)
+}
+
+const recordingId = ref<HotkeyAction | null>(null)
+
+function comboText(id: HotkeyAction): string {
+  return comboToText(buildBindings(settings.settings)[id])
+}
+
+function startRecord(id: HotkeyAction) {
+  recordingId.value = id
+}
+
+async function onRecordKey(e: KeyboardEvent) {
+  if (!recordingId.value) return
+  e.preventDefault()
+  e.stopPropagation()
+  if (e.key === 'Escape') { recordingId.value = null; return }
+  if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return
+  const mods: string[] = []
+  if (e.ctrlKey) mods.push('Ctrl')
+  if (e.shiftKey) mods.push('Shift')
+  if (e.altKey) mods.push('Alt')
+  const keyMap: Record<string, string> = {
+    ' ': 'Space', ArrowRight: 'ArrowRight', ArrowLeft: 'ArrowLeft',
+    ArrowUp: 'ArrowUp', ArrowDown: 'ArrowDown',
+  }
+  const k = keyMap[e.key] ?? e.key
+  const combo = [...mods, k].join('+')
+  const hotkeys = { ...(settings.settings?.hotkeys ?? {}), [recordingId.value]: combo }
+  await settings.update({ hotkeys })
+  recordingId.value = null
+}
+
+async function onAutoHideChange() {
+  await ipc.toggleAutoHide()
+  await settings.load()
 }
 
 async function onOpacity(v: number) {
@@ -44,6 +82,11 @@ async function restore() {
 
 onMounted(() => {
   void settings.load()
+  window.addEventListener('keydown', onRecordKey)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onRecordKey)
 })
 </script>
 
@@ -105,6 +148,18 @@ onMounted(() => {
         </select>
       </label>
       <label><input type="checkbox" :checked="settings.settings.pageDouble" @change="patch({ pageDouble: ($event.target as HTMLInputElement).checked })" /> {{ zh.settings.pageDouble }}</label>
+      <label><input type="checkbox" :checked="settings.settings.autoHideOnLeave" @change="onAutoHideChange" /> {{ zh.settings.autoHideOnLeave }}</label>
+    </section>
+
+    <section v-if="settings.settings" class="group">
+      <h2>{{ zh.settings.hotkeys }}</h2>
+      <p class="hint">{{ zh.settings.hotkeysHint }}</p>
+      <div class="hk-row" v-for="a in HOTKEY_ACTIONS" :key="a">
+        <span class="hk-name">{{ zh.hotkeyActions[a] }}</span>
+        <button class="hk-btn" :class="{ recording: recordingId === a }" @click="startRecord(a)">
+          {{ recordingId === a ? zh.settings.recording : comboText(a) }}
+        </button>
+      </div>
     </section>
 
     <section v-if="settings.settings" class="group">
@@ -133,4 +188,9 @@ onMounted(() => {
 .preview-body { font-family: var(--reader-font-family); font-size: var(--reader-font-size); line-height: var(--reader-line-height); letter-spacing: var(--reader-char-spacing); }
 .preview-body p { margin: 0 0 var(--reader-para-spacing) 0; }
 .about { margin-top: 12px; font-size: 13px; color: var(--text-dim); }
+.hint { font-size: 12px; color: var(--text-dim); margin-bottom: 10px; }
+.hk-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.hk-name { font-size: 14px; }
+.hk-btn { min-width: 120px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text); cursor: pointer; font-size: 13px; }
+.hk-btn.recording { border-color: var(--accent); color: var(--accent); }
 </style>

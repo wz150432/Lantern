@@ -1,3 +1,4 @@
+pub mod auto_hide;
 pub mod commands;
 pub mod encodings;
 pub mod error;
@@ -12,6 +13,8 @@ use commands::AppState;
 use library::Library;
 use session::SessionManager;
 use tauri::Manager;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -22,9 +25,10 @@ pub fn run() {
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, shortcut, event| {
-                    if event.state() == ShortcutState::Pressed
-                        && shortcut.matches(Modifiers::ALT, Code::KeyH)
-                    {
+                    if event.state() != ShortcutState::Pressed {
+                        return;
+                    }
+                    if shortcut.matches(Modifiers::ALT, Code::KeyH) {
                         if let Some(w) = app.get_webview_window("main") {
                             if w.is_visible().unwrap_or(false) {
                                 let _ = w.hide();
@@ -32,6 +36,13 @@ pub fn run() {
                                 let _ = w.show();
                                 let _ = w.set_focus();
                             }
+                        }
+                    } else if shortcut.matches(
+                        Modifiers::CONTROL | Modifiers::SHIFT | Modifiers::ALT,
+                        Code::Delete,
+                    ) {
+                        if let Some(state) = app.try_state::<AppState>() {
+                            let _ = commands::toggle_auto_hide_inner(&state);
                         }
                     }
                 })
@@ -42,16 +53,34 @@ pub fn run() {
             std::fs::create_dir_all(&data_dir)?;
             let library = Library::open(&data_dir)?;
             let settings = library.load_settings()?;
+            let auto_hide = Arc::new(AtomicBool::new(settings.auto_hide_on_leave));
             app.manage(AppState {
                 library: std::sync::Mutex::new(library),
                 sessions: std::sync::Mutex::new(SessionManager::new()),
                 settings: std::sync::Mutex::new(settings),
+                auto_hide: auto_hide.clone(),
                 data_dir,
             });
             // Alt+H：全局隐藏/显示窗口（注册失败不阻断启动，仅告警）
             let shortcut = Shortcut::new(Some(Modifiers::ALT), Code::KeyH);
             if let Err(e) = app.global_shortcut().register(shortcut) {
                 eprintln!("警告：Alt+H 全局快捷键注册失败（可能已被其它程序占用）：{e}");
+            }
+            // Ctrl+Shift+Alt+Delete：切换“鼠标移出自动隐藏”
+            let ah_shortcut = Shortcut::new(
+                Some(Modifiers::CONTROL | Modifiers::SHIFT | Modifiers::ALT),
+                Code::Delete,
+            );
+            if let Err(e) = app.global_shortcut().register(ah_shortcut) {
+                eprintln!("警告：Ctrl+Shift+Alt+Delete 全局快捷键注册失败：{e}");
+            }
+            // Windows：启动鼠标位置追踪线程（自动隐藏）
+            #[cfg(target_os = "windows")]
+            {
+                if let Some(w) = app.get_webview_window("main") {
+                    let hwnd = w.hwnd().map_err(|e| e.to_string())?.0 as usize;
+                    auto_hide::start(hwnd, auto_hide.clone());
+                }
             }
             Ok(())
         })
@@ -74,6 +103,7 @@ pub fn run() {
             commands::set_opacity,
             commands::set_decorations,
             commands::toggle_window_visible,
+            commands::toggle_auto_hide,
             commands::exit_app,
         ])
         .run(tauri::generate_context!())

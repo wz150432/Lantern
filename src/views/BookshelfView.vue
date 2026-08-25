@@ -6,6 +6,7 @@ import { useLibraryStore } from '../stores/library'
 import { useSettingsStore } from '../stores/settings'
 import { useHotkeys } from '../composables/useHotkeys'
 import * as ipc from '../ipc'
+import { buildBindings } from '../hotkeys/actions'
 import BookCard from '../components/BookCard.vue'
 import type { BookRecord } from '../types'
 import { zh } from '../i18n/zh'
@@ -57,7 +58,7 @@ async function pickAndOpen() {
   router.push({ path: '/reader', query: { id: String(opened.id) } })
 }
 
-useHotkeys({ openFile: pickAndOpen })
+useHotkeys(() => buildBindings(settings.settings), { openFile: pickAndOpen })
 
 onMounted(async () => {
   await settings.load()

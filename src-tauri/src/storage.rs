@@ -186,6 +186,16 @@ impl Storage {
         if let Some(v) = parsed.get("pageDouble") {
             merged.page_double = v.as_bool().unwrap_or(false);
         }
+        if let Some(v) = parsed.get("autoHideOnLeave") {
+            merged.auto_hide_on_leave = v.as_bool().unwrap_or(false);
+        }
+        if let Some(v) = parsed.get("hotkeys").and_then(|h| h.as_object()) {
+            for (k, val) in v {
+                if let Some(s) = val.as_str() {
+                    merged.hotkeys.insert(k.clone(), s.to_string());
+                }
+            }
+        }
         if let Some(v) = parsed.get("windowTopmost") {
             merged.window_topmost = v.as_bool().unwrap_or(false);
         }

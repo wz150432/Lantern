@@ -1,51 +1,26 @@
 import { onMounted, onUnmounted } from 'vue'
+import type { HotkeyAction } from '../hotkeys/actions'
+import { comboMatches } from '../hotkeys/actions'
 
-export interface HotkeyHandlers {
-  nextPage?: () => void
-  prevPage?: () => void
-  scrollUp?: () => void
-  scrollDown?: () => void
-  nextChapter?: () => void
-  prevChapter?: () => void
-  toggleFullscreen?: () => void
-  toggleImmersive?: () => void
-  toggleAutoPage?: () => void
-  toggleSearch?: () => void
-  jumpPercent?: () => void
-  addBookmark?: () => void
-  openFile?: () => void
-  zoomIn?: () => void
-  zoomOut?: () => void
-  toggleTopmost?: () => void
-  toggleWindowVisible?: () => void
-}
+export type HotkeyHandlers = Partial<Record<HotkeyAction, () => void>>
 
-export function useHotkeys(handlers: HotkeyHandlers) {
+/**
+ * 数据驱动的快捷键：bindings 通过 getter 读取（跟随设置实时更新）。
+ * 按键时遍历 handlers 中提供的动作，与当前绑定组合匹配则触发。
+ */
+export function useHotkeys(
+  getBindings: () => Record<HotkeyAction, string>,
+  handlers: HotkeyHandlers,
+) {
   function onKey(e: KeyboardEvent) {
-    const k = e.key
-    if (e.ctrlKey && !e.shiftKey && !e.altKey) {
-      if (k === 'ArrowRight') { handlers.nextChapter?.(); e.preventDefault(); return }
-      if (k === 'ArrowLeft') { handlers.prevChapter?.(); e.preventDefault(); return }
-      if (k === 'f') { handlers.toggleSearch?.(); e.preventDefault(); return }
-      if (k === 'g') { handlers.jumpPercent?.(); e.preventDefault(); return }
-      if (k === 'm') { handlers.addBookmark?.(); e.preventDefault(); return }
-      if (k === 'o') { handlers.openFile?.(); e.preventDefault(); return }
-      if (k === 't') { handlers.toggleTopmost?.(); e.preventDefault(); return }
-      if (k === '=' || k === '+') { handlers.zoomIn?.(); e.preventDefault(); return }
-      if (k === '-') { handlers.zoomOut?.(); e.preventDefault(); return }
-      return
-    }
-    if (e.altKey && !e.ctrlKey && !e.shiftKey && (k === 'h' || k === 'H')) {
-      handlers.toggleWindowVisible?.(); e.preventDefault(); return
-    }
-    if (!e.ctrlKey && !e.shiftKey && !e.altKey) {
-      if (k === 'ArrowUp') { handlers.scrollUp?.(); e.preventDefault(); return }
-      if (k === 'ArrowDown') { handlers.scrollDown?.(); e.preventDefault(); return }
-      if (k === 'ArrowRight') { handlers.nextPage?.(); e.preventDefault(); return }
-      if (k === 'ArrowLeft') { handlers.prevPage?.(); e.preventDefault(); return }
-      if (k === ' ') { handlers.toggleAutoPage?.(); e.preventDefault(); return }
-      if (k === 'F11') { handlers.toggleFullscreen?.(); e.preventDefault(); return }
-      if (k === 'F12') { handlers.toggleImmersive?.(); e.preventDefault(); return }
+    const bindings = getBindings()
+    for (const action of Object.keys(handlers) as HotkeyAction[]) {
+      const combo = bindings[action]
+      if (combo && comboMatches(combo, e)) {
+        handlers[action]?.()
+        e.preventDefault()
+        return
+      }
     }
   }
   onMounted(() => window.addEventListener('keydown', onKey))

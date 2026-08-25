@@ -16,7 +16,7 @@ export const zh = {
     noBookmarks: '暂无书签（Ctrl+M 添加）',
   },
   settings: {
-    title: '设置', display: '显示', typography: '排版', reading: '阅读', window: '窗口', advanced: '高级',
+    title: '设置', display: '显示设置', typography: '排版设置', reading: '阅读设置', hotkeys: '按键设置', window: '窗口', advanced: '高级',
     theme: '主题', fontFamily: '字体', fontSize: '字号', textColor: '文字颜色',
     backgroundColor: '背景颜色', lineHeight: '行距', paragraphSpacing: '段距',
     firstLineIndent: '首行缩进', charSpacing: '字距', compressBlankLines: '压缩空行',
@@ -24,11 +24,17 @@ export const zh = {
     pageModePage: '翻页', pageModeScroll: '滚动', autoPageInterval: '自动翻页间隔(ms)',
     clickMode: '点击翻页方式', clickThirds: '左右区域', clickLeftRight: '左键下页/右键上页',
     scrollSpeed: '滚动速度', windowTopmost: '窗口置顶', windowOpacity: '窗口透明度',
-    immersiveMode: '沉浸模式（F12 隐藏顶栏/底栏）', pageDouble: '翻页双页（左右双页）', restoreDefault: '还原默认设置', about: '关于',
+    immersiveMode: '沉浸模式（F12 隐藏顶栏/底栏）', pageDouble: '翻页双页（左右双页）', autoHideOnLeave: '鼠标移出自动隐藏（Ctrl+Shift+Alt+Delete 切换）', recording: '按新组合键…', hotkeysHint: '点击右侧按键后按下新的组合键即可录制（Esc 取消）', restoreDefault: '还原默认设置', about: '关于',
     preview: '排版预览', resetConfirm: '确定要还原默认设置吗？',
     fontSystem: '系统默认', fontSerif: '思源宋体', fontNotoSerif: 'Noto Serif',
     previewChapter: '第一章 预览', previewBody: '这是排版预览文本，用于实时查看行距、段距、字号与首行缩进的效果。点击设置即刻生效。',
     version: 'v0.1.0',
+  },
+  hotkeyActions: {
+    nextPage: '下一页', prevPage: '上一页', nextChapter: '下一章', prevChapter: '上一章',
+    scrollUp: '向上滚动一行', scrollDown: '向下滚动一行', toggleSearch: '查找', jumpPercent: '跳转进度',
+    addBookmark: '添加书签', openFile: '打开文件', toggleTopmost: '窗口置顶', zoomIn: '放大', zoomOut: '缩小',
+    toggleAutoPage: '自动翻页', toggleFullscreen: '全屏', toggleImmersive: '隐藏顶栏/底栏', toggleWindowVisible: '隐藏/显示窗口',
   },
   common: { confirm: '确定', cancel: '取消', delete: '删除', close: '关闭', exit: '退出' },
 }

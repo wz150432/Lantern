@@ -7,6 +7,7 @@ const settings: AppSettings = {
   paragraphSpacing: 8, firstLineIndent: true, charSpacing: 0.5, compressBlankLines: true,
   wordWrap: true, innerPadding: 48, scrollSpeed: 1, pageMode: 'page',
   autoPageIntervalMs: 3000, clickMode: 'thirds', pageDouble: false, windowTopmost: false,
+  autoHideOnLeave: false, hotkeys: {},
   windowOpacity: 1, immersiveMode: false,
 }
 

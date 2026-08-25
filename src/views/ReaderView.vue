@@ -7,6 +7,7 @@ import { useLibraryStore } from '../stores/library'
 import { toParagraphs } from '../reader/text'
 import { pageCount, pageIndexFromScroll, scrollLeftFromPage, columnAdvance } from '../reader/pagination'
 import { streamCharPosition } from '../reader/stream'
+import { buildBindings } from '../hotkeys/actions'
 import { useHotkeys } from '../composables/useHotkeys'
 import { zh } from '../i18n/zh'
 import TocPanel from '../components/TocPanel.vue'
@@ -388,7 +389,7 @@ function scrollLines(direction: number) {
   syncProgressFromScroll()
 }
 
-useHotkeys({
+useHotkeys(() => buildBindings(settings.settings), {
   nextPage, prevPage,
   scrollUp: () => scrollLines(-1), scrollDown: () => scrollLines(1),
   nextChapter: () => void reader.nextChapter().then(resetScrollToTop),

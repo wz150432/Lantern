@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -65,6 +66,8 @@ pub struct AppSettings {
     pub click_mode: String,
     pub page_double: bool,
     pub window_topmost: bool,
+    pub auto_hide_on_leave: bool,
+    pub hotkeys: HashMap<String, String>,
     pub window_opacity: f64,
     pub immersive_mode: bool,
 }
@@ -87,6 +90,8 @@ impl Default for AppSettings {
             auto_page_interval_ms: 3000,
             click_mode: "thirds".into(),
             page_double: false,
+            auto_hide_on_leave: false,
+            hotkeys: HashMap::new(),
             window_topmost: false,
             window_opacity: 1.0,
             immersive_mode: false,
