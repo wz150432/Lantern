@@ -29,3 +29,15 @@ impl From<std::io::Error> for AppError {
 }
 
 pub type AppResult<T> = Result<T, AppError>;
+
+impl From<rusqlite::Error> for AppError {
+    fn from(e: rusqlite::Error) -> Self {
+        AppError::Storage(e.to_string())
+    }
+}
+
+impl From<serde_json::Error> for AppError {
+    fn from(e: serde_json::Error) -> Self {
+        AppError::Storage(format!("JSON: {e}"))
+    }
+}
