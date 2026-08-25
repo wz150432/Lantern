@@ -63,10 +63,12 @@ function applyColumns() {
   const el = scrollEl.value
   if (!el) return
   if (settings.settings?.pageMode === 'page') {
+    el.classList.add('page-mode')
     const padding = settings.settings?.innerPadding ?? 48
     const contentWidth = el.clientWidth - padding * 2
     el.style.columnWidth = `${Math.max(100, contentWidth)}px`
   } else {
+    el.classList.remove('page-mode')
     el.style.columnWidth = ''
   }
 }
@@ -289,8 +291,12 @@ function onReaderMouseDown(e: MouseEvent) {
 function onReaderMouseUp() { hideButtonMask = 0 }
 
 async function addBookmarkWithFeedback() {
-  await reader.addBookmarkHere()
-  showToast(zh.reader.bookmarkAdded)
+  try {
+    await reader.addBookmarkHere()
+    showToast(zh.reader.bookmarkAdded)
+  } catch (err) {
+    console.error('add bookmark failed:', err)
+  }
 }
 
 async function pickAndOpen() {
@@ -413,7 +419,7 @@ onBeforeUnmount(() => {
     <main
       ref="scrollEl"
       class="reader-scroll"
-      :class="{ scroll: settings.settings?.pageMode === 'scroll' }"
+      :class="{ 'page-mode': settings.settings?.pageMode === 'page' }"
       @click="onReaderClick" @wheel="onWheel"
       @contextmenu="onReaderContextMenu"
       @scroll="syncProgressFromScroll"
@@ -509,18 +515,15 @@ onBeforeUnmount(() => {
 .reader-scroll {
   flex: 1;
   height: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  column-width: calc(100% - var(--reader-padding) * 2);
-  column-gap: 48px;
-  column-fill: auto;
-  padding: 0 var(--reader-padding);
-}
-.reader-scroll.scroll {
-  column-width: auto;
-  column-count: 1;
   overflow-x: hidden;
   overflow-y: auto;
+  padding: 0 var(--reader-padding);
+}
+.reader-scroll.page-mode {
+  overflow-x: auto;
+  overflow-y: hidden;
+  column-gap: 48px;
+  column-fill: auto;
 }
 .page-body {
   font-family: var(--reader-font-family);
