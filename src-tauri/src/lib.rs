@@ -3,6 +3,7 @@ pub mod error;
 pub mod library;
 pub mod models;
 pub mod parsers;
+pub mod search;
 pub mod storage;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
