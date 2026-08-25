@@ -309,7 +309,7 @@ mod tests {
     fn gbk_file_decodes_and_parses() {
         use encoding_rs::GBK;
         let (bytes, _, _) = GBK.encode(SAMPLE);
-        let f = write_tmp(&bytes.into_owned());
+        let f = write_tmp(&bytes);
         let book = TxtBook::open(f.path(), None).unwrap();
         assert_eq!(book.encoding(), DetectedEncoding::Gbk);
         assert_eq!(book.chapter_list().len(), 3);
@@ -323,7 +323,7 @@ mod tests {
     fn gbk_single_chapter_reads_whole_text() {
         use encoding_rs::GBK;
         let (bytes, _, _) = GBK.encode("没有任何章节标记的普通文本。\n第二行。");
-        let f = write_tmp(&bytes.into_owned());
+        let f = write_tmp(&bytes);
         let book = TxtBook::open(f.path(), None).unwrap();
         let text = book.chapter_text(0).unwrap();
         assert!(text.contains("没有任何章节标记的普通文本。"));

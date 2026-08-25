@@ -74,7 +74,7 @@ mod tests {
         assert_eq!(detect_encoding(&bytes), DetectedEncoding::Utf8);
         let (rest, enc) = strip_bom(&bytes);
         assert_eq!(enc, DetectedEncoding::Utf8);
-        assert_eq!(rest, &[b'a', b'b']);
+        assert_eq!(rest, b"ab");
     }
 
     #[test]

@@ -332,9 +332,11 @@ mod tests {
     #[test]
     fn settings_roundtrip() {
         let (_d, s) = open_storage();
-        let mut cfg = AppSettings::default();
-        cfg.font_size = 22.0;
-        cfg.page_mode = "scroll".into();
+        let cfg = AppSettings {
+            font_size: 22.0,
+            page_mode: "scroll".into(),
+            ..AppSettings::default()
+        };
         s.save_settings(&cfg).unwrap();
         let loaded = s.load_settings().unwrap();
         assert_eq!(loaded.font_size, 22.0);
