@@ -26,10 +26,16 @@ const showBookmarks = ref(false)
 const showSearch = ref(false)
 const isFullscreen = ref(false)
 const activeSearch = ref<{ query: string; hits: SearchHit[] } | null>(null)
+const showJump = ref(false)
+const jumpValue = ref('50')
+const jumpInput = ref<HTMLInputElement | null>(null)
+
+const indentStyle = computed(() => ({
+  textIndent: settings.settings?.firstLineIndent ? '2em' : '0',
+}))
 
 const paragraphs = computed(() =>
-  toParagraphs(reader.chapterText, { compressBlankLines: settings.settings?.compressBlankLines ?? true })
-    .filter((p) => p.text !== ''),
+  toParagraphs(reader.chapterText, { compressBlankLines: settings.settings?.compressBlankLines ?? true }),
 )
 
 function pageWidth(): number {
@@ -188,10 +194,18 @@ function isMarked(text: string): boolean {
   return text.includes(s.query)
 }
 
-function jumpPercent() {
-  const p = Number(prompt(zh.reader.progress, '50'))
-  if (Number.isNaN(p)) return
-  const target = Math.min(100, Math.max(0, p)) / 100
+function openJump() {
+  jumpValue.value = String(Math.round(reader.overallProgress() * 100))
+  showJump.value = true
+  void nextTick(() => jumpInput.value?.focus())
+}
+
+function closeJump() {
+  showJump.value = false
+}
+
+function doJump(value: number) {
+  const target = Math.min(100, Math.max(0, value)) / 100
   const total = reader.chapters.length
   if (total === 0) return
   const ch = Math.min(Math.floor(target * total), total - 1)
@@ -239,7 +253,7 @@ useHotkeys({
   nextPage, prevPage,
   nextChapter: () => void reader.nextChapter().then(resetScrollToTop),
   prevChapter: () => void reader.prevChapter().then(resetScrollToTop),
-  toggleFullscreen, toggleImmersive, toggleAutoPage, toggleSearch, jumpPercent,
+  toggleFullscreen, toggleImmersive, toggleAutoPage, toggleSearch, jumpPercent: openJump,
   addBookmark: () => void reader.addBookmarkHere(),
   openFile: pickAndOpen,
   zoomIn: () => zoom(1), zoomOut: () => zoom(-1), toggleTopmost,
@@ -340,7 +354,7 @@ onBeforeUnmount(() => {
       @contextmenu="onReaderContextMenu"
       @scroll="syncProgressFromScroll"
     >
-      <div class="page-body">
+      <div class="page-body" :style="indentStyle">
         <p
           v-for="(p, i) in paragraphs"
           :key="i"
@@ -349,12 +363,26 @@ onBeforeUnmount(() => {
       </div>
     </main>
 
+    <div v-if="showJump" class="jump-overlay">
+      <input
+        ref="jumpInput"
+        v-model="jumpValue"
+        type="number"
+        min="0"
+        max="100"
+        :placeholder="zh.reader.jumpPlaceholder"
+        @keydown.enter.prevent="doJump(Number(jumpValue)); closeJump()"
+        @keydown.esc.prevent="closeJump"
+        @blur="closeJump"
+      />
+    </div>
+
     <footer class="bottombar">
       <span class="pct">{{ Math.round(reader.overallProgress() * 100) }}%</span>
       <button @click="reader.prevChapter()">{{ zh.reader.prevChapter }}</button>
       <button @click="toggleAutoPage">{{ reader.autoPageOn ? zh.reader.autoStop : zh.reader.autoStart }}</button>
       <button @click="reader.addBookmarkHere()">{{ zh.reader.addBookmark }}</button>
-      <button @click="jumpPercent()">{{ zh.reader.progress }}</button>
+      <button @click="openJump">{{ zh.reader.progress }}</button>
       <button @click="reader.nextChapter()">{{ zh.reader.nextChapter }}</button>
     </footer>
   </div>
@@ -438,7 +466,6 @@ onBeforeUnmount(() => {
 }
 .page-body p {
   margin: 0 0 var(--reader-para-spacing) 0;
-  text-indent: 2em;
 }
 .page-body p.marked { background: rgba(255, 213, 0, .35); border-radius: 2px; }
 .page-body p.heading {
@@ -463,6 +490,25 @@ onBeforeUnmount(() => {
 }
 .searchbar-slot {
   /* SearchBar 自行以 .reader 为包含块定位（.searchbar 为 absolute） */
+}
+.jump-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 52px;
+  display: flex;
+  justify-content: center;
+  z-index: 30;
+}
+.jump-overlay input {
+  width: 180px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .2);
 }
 .panel {
   position: absolute;

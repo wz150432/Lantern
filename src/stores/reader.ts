@@ -18,10 +18,11 @@ export const useReaderStore = defineStore('reader', () => {
     bookId.value = id
     bookPath.value = path
     chapters.value = await ipc.getChapters(id, path)
-    currentChapter.value = Math.min(Math.max(0, savedChapter), Math.max(0, chapters.value.length - 1))
-    await loadChapter(currentChapter.value)
+    const ch = Math.min(Math.max(0, savedChapter), Math.max(0, chapters.value.length - 1))
+    currentChapter.value = ch
+    await loadChapter(ch)
+    if (chapters.value.length > 0) chapterProgress.value = Math.min(1, Math.max(0, savedProgress * chapters.value.length - ch))
     bookmarks.value = await ipc.getBookmarks(id)
-    if (savedProgress > 0) chapterProgress.value = Math.min(1, savedProgress)
   }
 
   async function loadChapter(index: number) {
@@ -37,7 +38,7 @@ export const useReaderStore = defineStore('reader', () => {
   }
 
   async function persist() {
-    await ipc.saveProgress(bookId.value, currentChapter.value, chapterProgress.value)
+    await ipc.saveProgress(bookId.value, currentChapter.value, overallProgress())
     progress.value = overallProgress()
   }
 

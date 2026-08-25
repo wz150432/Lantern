@@ -1,14 +1,24 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSettingsStore } from '../stores/settings'
 import { THEME_PRESETS } from '../theme/theme'
 import { zh } from '../i18n/zh'
 import * as ipc from '../ipc'
+import { ask } from '@tauri-apps/plugin-dialog'
 import type { AppSettings } from '../types'
 
 const router = useRouter()
 const settings = useSettingsStore()
+
+const previewIndentStyle = computed(() => ({
+  textIndent: settings.settings?.firstLineIndent ? '2em' : '0',
+}))
+
+const previewParagraphs = computed(() => {
+  if (!settings.settings?.compressBlankLines) return [zh.settings.previewChapter, '', zh.settings.previewBody]
+  return [zh.settings.previewChapter, zh.settings.previewBody]
+})
 
 function patch(p: Partial<AppSettings>) {
   void settings.update(p)
@@ -22,8 +32,14 @@ async function onOpacity(v: number) {
   } catch { /* ignore */ }
 }
 
-function restore() {
-  if (window.confirm(zh.settings.resetConfirm)) void settings.restoreDefault()
+async function restore() {
+  const ok = await ask(zh.settings.resetConfirm, {
+    title: zh.settings.restoreDefault,
+    kind: 'warning',
+    okLabel: zh.common.confirm,
+    cancelLabel: zh.common.cancel,
+  })
+  if (ok) void settings.restoreDefault()
 }
 
 onMounted(() => {
@@ -67,9 +83,8 @@ onMounted(() => {
 
       <div class="preview">
         <h3>{{ zh.settings.preview }}</h3>
-        <div class="preview-body">
-          <p>{{ zh.settings.previewChapter }}</p>
-          <p>{{ zh.settings.previewBody }}</p>
+        <div class="preview-body" :style="previewIndentStyle">
+          <p v-for="(text, i) in previewParagraphs" :key="i">{{ text }}</p>
         </div>
       </div>
     </section>
@@ -115,6 +130,6 @@ onMounted(() => {
 .group input[type="number"], .group select { padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; }
 .preview { margin-top: 14px; padding: 14px; background: var(--reader-bg); border-radius: 8px; }
 .preview-body { font-family: var(--reader-font-family); font-size: var(--reader-font-size); line-height: var(--reader-line-height); letter-spacing: var(--reader-char-spacing); }
-.preview-body p { text-indent: 2em; margin: 0 0 var(--reader-para-spacing) 0; }
+.preview-body p { margin: 0 0 var(--reader-para-spacing) 0; }
 .about { margin-top: 12px; font-size: 13px; color: var(--text-dim); }
 </style>

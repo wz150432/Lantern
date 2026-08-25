@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { open as dialogOpen } from '@tauri-apps/plugin-dialog'
+import { ask, open as dialogOpen } from '@tauri-apps/plugin-dialog'
 import { revealItemInDir } from '@tauri-apps/plugin-opener'
 import { useLibraryStore } from '../stores/library'
 import { useSettingsStore } from '../stores/settings'
@@ -41,8 +41,13 @@ async function onOpen(book: BookRecord) {
 async function onImport() {
   const path = await pickBookPath()
   if (!path) return
-  const mode = window.confirm(zh.shelf.importPrompt) ? 'copied' : 'linked'
-  await lib.importBook(path, mode)
+  const copy = await ask(zh.shelf.importPrompt, {
+    title: zh.shelf.importBook,
+    kind: 'info',
+    okLabel: zh.common.confirm,
+    cancelLabel: zh.common.cancel,
+  })
+  await lib.importBook(path, copy ? 'copied' : 'linked')
 }
 
 async function pickAndOpen() {
@@ -52,8 +57,14 @@ async function pickAndOpen() {
   router.push({ path: '/reader', query: { id: String(opened.id) } })
 }
 
-function onRemove(book: BookRecord) {
-  const deleteCopy = book.storageMode === 'copied' && window.confirm(zh.shelf.deleteCopyPrompt)
+async function onRemove(book: BookRecord) {
+  const deleteCopy = book.storageMode === 'copied' &&
+    (await ask(zh.shelf.deleteCopyPrompt, {
+      title: zh.shelf.remove,
+      kind: 'warning',
+      okLabel: zh.common.confirm,
+      cancelLabel: zh.common.cancel,
+    }))
   void lib.remove(book.id, deleteCopy)
 }
 
