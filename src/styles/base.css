@@ -1,0 +1,12 @@
+:root {
+  --bg: #faf9f7; --text: #2b2b2b; --text-dim: #8a8a8a;
+  --panel: #ffffff; --accent: #4a6fa5; --border: #e6e4e0;
+  --reader-bg: #f5f4f1; --reader-text: #333333;
+  --reader-font-family: system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --reader-font-size: 18px; --reader-line-height: 1.8;
+  --reader-para-spacing: 8px; --reader-char-spacing: 0.5px;
+  --reader-padding: 48px; --reader-word-wrap: break-word;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body, #app { height: 100%; }
+body { font-family: var(--reader-font-family); background: var(--bg); color: var(--text); user-select: text; }
