@@ -12,6 +12,7 @@ export const zh = {
     search: '查找', searchPlaceholder: '输入关键字…', noResult: '没有找到匹配内容',
     progress: '进度', bookmarkAdded: '已添加书签', editMode: '编辑模式',
     fileMissing: '文件缺失', relocate: '重新定位文件',
+    fullscreen: '全屏', immersive: '沉浸', autoStart: '自动', autoStop: '停止', addBookmark: '书签',
   },
   settings: {
     title: '设置', display: '显示', typography: '排版', reading: '阅读', window: '窗口', advanced: '高级',
@@ -28,4 +29,3 @@ export const zh = {
   common: { confirm: '确定', cancel: '取消', delete: '删除', close: '关闭' },
 }
 export type ZhDict = typeof zh
-
