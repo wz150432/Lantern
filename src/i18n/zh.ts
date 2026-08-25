@@ -24,7 +24,7 @@ export const zh = {
     pageModePage: '翻页', pageModeScroll: '滚动', autoPageInterval: '自动翻页间隔(ms)',
     clickMode: '点击翻页方式', clickThirds: '左右区域', clickLeftRight: '左键下页/右键上页',
     scrollSpeed: '滚动速度', windowTopmost: '窗口置顶', windowOpacity: '窗口透明度',
-    immersiveMode: '沉浸模式（F12 隐藏顶栏/底栏）', pageDouble: '翻页双页（左右双页）', autoHideOnLeave: '鼠标移出自动隐藏（Ctrl+Alt+Shift+P 切换）', recording: '按新组合键…', hotkeysHint: '点击右侧按键后按下新的组合键即可录制（Esc 取消）', restoreDefault: '还原默认设置', about: '关于',
+    immersiveMode: '沉浸模式（F12 隐藏顶栏/底栏）', pageDouble: '翻页双页（左右双页）', autoHideOnLeave: '鼠标移出自动隐藏（Ctrl+Alt+Shift+P 切换）', recording: '按新组合键…', hotkeysHint: '点击右侧按键后按下新的组合键即可录制（Esc 取消）', resetHotkeys: '还原默认快捷键', autoHideOn: '已开启鼠标移出自动隐藏', autoHideOff: '已关闭鼠标移出自动隐藏', restoreDefault: '还原默认设置', about: '关于',
     preview: '排版预览', resetConfirm: '确定要还原默认设置吗？',
     fontSystem: '系统默认', fontSerif: '思源宋体', fontNotoSerif: 'Noto Serif',
     previewChapter: '第一章 预览', previewBody: '这是排版预览文本，用于实时查看行距、段距、字号与首行缩进的效果。点击设置即刻生效。',
@@ -34,7 +34,7 @@ export const zh = {
     nextPage: '下一页', prevPage: '上一页', nextChapter: '下一章', prevChapter: '上一章',
     scrollUp: '向上滚动一行', scrollDown: '向下滚动一行', toggleSearch: '查找', jumpPercent: '跳转进度',
     addBookmark: '添加书签', openFile: '打开文件', toggleTopmost: '窗口置顶', zoomIn: '放大', zoomOut: '缩小',
-    toggleAutoPage: '自动翻页', toggleFullscreen: '全屏', toggleImmersive: '隐藏顶栏/底栏', toggleWindowVisible: '隐藏/显示窗口',
+    toggleAutoPage: '自动翻页', toggleFullscreen: '全屏', toggleImmersive: '隐藏顶栏/底栏', toggleWindowVisible: '隐藏/显示窗口', toggleAutoHide: '自动隐藏开关',
   },
   common: { confirm: '确定', cancel: '取消', delete: '删除', close: '关闭', exit: '退出' },
 }

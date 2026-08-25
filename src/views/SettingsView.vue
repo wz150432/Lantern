@@ -27,12 +27,14 @@ function patch(p: Partial<AppSettings>) {
 }
 
 const recordingId = ref<HotkeyAction | null>(null)
+const conflictMsg = ref('')
 
 function comboText(id: HotkeyAction): string {
   return comboToText(buildBindings(settings.settings)[id])
 }
 
 function startRecord(id: HotkeyAction) {
+  conflictMsg.value = ''
   recordingId.value = id
 }
 
@@ -52,9 +54,22 @@ async function onRecordKey(e: KeyboardEvent) {
   }
   const k = keyMap[e.key] ?? e.key
   const combo = [...mods, k].join('+')
+  const merged = buildBindings(settings.settings)
+  const conflict = HOTKEY_ACTIONS.find((a) => a !== recordingId.value && merged[a] === combo)
+  if (conflict) {
+    conflictMsg.value = `${zh.hotkeyActions[conflict]} 已占用「${comboText(combo as HotkeyAction)}」，请换一个`
+    recordingId.value = null
+    return
+  }
   const hotkeys = { ...(settings.settings?.hotkeys ?? {}), [recordingId.value]: combo }
   await settings.update({ hotkeys })
+  conflictMsg.value = ''
   recordingId.value = null
+}
+
+async function resetHotkeys() {
+  await settings.update({ hotkeys: {} })
+  conflictMsg.value = ''
 }
 
 async function onAutoHideChange() {
@@ -154,6 +169,8 @@ onUnmounted(() => {
     <section v-if="settings.settings" class="group">
       <h2>{{ zh.settings.hotkeys }}</h2>
       <p class="hint">{{ zh.settings.hotkeysHint }}</p>
+      <p v-if="conflictMsg" class="hint conflict">{{ conflictMsg }}</p>
+      <button class="hk-reset" @click="resetHotkeys">{{ zh.settings.resetHotkeys }}</button>
       <div class="hk-row" v-for="a in HOTKEY_ACTIONS" :key="a">
         <span class="hk-name">{{ zh.hotkeyActions[a] }}</span>
         <button class="hk-btn" :class="{ recording: recordingId === a }" @click="startRecord(a)">
@@ -193,4 +210,6 @@ onUnmounted(() => {
 .hk-name { font-size: 14px; }
 .hk-btn { min-width: 120px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text); cursor: pointer; font-size: 13px; }
 .hk-btn.recording { border-color: var(--accent); color: var(--accent); }
+.hint.conflict { color: #c0392b; }
+.hk-reset { margin-bottom: 10px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text); cursor: pointer; font-size: 12px; }
 </style>

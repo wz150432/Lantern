@@ -46,6 +46,8 @@ const streamTexts = ref<string[]>([])
 const streamIndices = ref<number[]>([])
 const showTopBar = ref(false)
 const showBottomBar = ref(false)
+let wheelAccum = 0
+let snapTimer: ReturnType<typeof setTimeout> | null = null
 
 function showToast(msg: string) {
   toast.value = msg
@@ -63,6 +65,7 @@ const paragraphs = computed(() =>
 watch(() => reader.chapterText, () => {
   streamTexts.value = []
   streamIndices.value = []
+  wheelAccum = 0
 })
 
 function pageWidth(): number {
@@ -151,6 +154,17 @@ async function maybeAppendChapter() {
   void maybeAppendChapter()
 }
 
+function scheduleLineSnap() {
+  if (snapTimer) clearTimeout(snapTimer)
+  snapTimer = setTimeout(() => {
+    const el = scrollEl.value
+    if (!el || settings.settings?.pageMode !== 'scroll') return
+    const lp = linePx()
+    const snapped = Math.round(el.scrollTop / lp) * lp
+    if (Math.abs(el.scrollTop - snapped) > 1) el.scrollTop = snapped
+  }, 160)
+}
+
 function syncProgressFromScroll() {
   const el = scrollEl.value
   if (!el) return
@@ -163,6 +177,7 @@ function syncProgressFromScroll() {
     reader.currentChapter = pos.chapterIndex
     reader.chapterProgress = pos.frac
     void maybeAppendChapter()
+    scheduleLineSnap()
   }
   schedulePersist()
 }
@@ -333,15 +348,19 @@ function onWheel(e: WheelEvent) {
     void ipc.setOpacity(next).catch(() => { /* ignore */ })
     return
   }
-  // 滚动模式：逐行滚动（速度可调），章节自动续接
+  // 滚动模式：累积式整行滚动（触控板/鼠标一致），章节自动续接
   if (settings.settings?.pageMode !== 'page') {
     e.preventDefault()
     const el = scrollEl.value
     if (!el) return
-    const lines = Math.max(1, settings.settings?.scrollSpeed ?? 1)
-    const dy = linePx() * lines * (e.deltaY > 0 ? 1 : -1)
-    el.scrollBy({ top: dy })
-    syncProgressFromScroll()
+    const step = linePx() * Math.max(1, settings.settings?.scrollSpeed ?? 1)
+    wheelAccum += e.deltaY
+    const lines = Math.trunc(wheelAccum / step)
+    if (lines !== 0) {
+      wheelAccum -= lines * step
+      el.scrollBy({ top: lines * step })
+      syncProgressFromScroll()
+    }
     return
   }
   // 翻页模式：滚轮上下翻页（节流）
@@ -397,6 +416,11 @@ useHotkeys(() => buildBindings(settings.settings), {
   toggleFullscreen, toggleImmersive, toggleAutoPage, toggleSearch, jumpPercent: openJump,
   addBookmark: () => void addBookmarkWithFeedback(),
   toggleWindowVisible: () => void ipc.toggleWindowVisible(),
+  toggleAutoHide: async () => {
+    await ipc.toggleAutoHide()
+    await settings.load()
+    showToast(settings.settings?.autoHideOnLeave ? zh.settings.autoHideOn : zh.settings.autoHideOff)
+  },
   openFile: pickAndOpen,
   zoomIn: () => zoom(1), zoomOut: () => zoom(-1), toggleTopmost,
 })

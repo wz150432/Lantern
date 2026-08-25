@@ -5,7 +5,7 @@ export const HOTKEY_ACTIONS = [
   'scrollUp', 'scrollDown', 'toggleSearch', 'jumpPercent',
   'addBookmark', 'openFile', 'toggleTopmost', 'zoomIn',
   'zoomOut', 'toggleAutoPage', 'toggleFullscreen', 'toggleImmersive',
-  'toggleWindowVisible',
+  'toggleWindowVisible', 'toggleAutoHide',
 ] as const
 
 export type HotkeyAction = (typeof HOTKEY_ACTIONS)[number]
@@ -28,6 +28,7 @@ export const DEFAULT_HOTKEYS: Record<HotkeyAction, string> = {
   toggleFullscreen: 'F11',
   toggleImmersive: 'F12',
   toggleWindowVisible: 'Alt+H',
+  toggleAutoHide: 'Ctrl+Alt+Shift+P',
 }
 
 export function buildBindings(settings: AppSettings | null): Record<HotkeyAction, string> {
@@ -51,7 +52,8 @@ export function comboMatches(combo: string, e: KeyboardEvent): boolean {
   if (e.ctrlKey !== wantCtrl) return false
   if (e.shiftKey !== wantShift) return false
   if (e.altKey !== wantAlt) return false
-  return e.key.toLowerCase() === key.toLowerCase()
+  const codeKey = e.code?.startsWith('Key') ? e.code[3].toLowerCase() : e.code?.toLowerCase()
+  return e.key.toLowerCase() === key.toLowerCase() || codeKey === key.toLowerCase()
 }
 
 export function comboToText(combo: string): string {
