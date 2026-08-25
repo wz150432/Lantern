@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useReaderStore } from '../stores/reader'
 import { useSettingsStore } from '../stores/settings'
@@ -34,13 +34,41 @@ const indentStyle = computed(() => ({
   textIndent: settings.settings?.firstLineIndent ? '2em' : '0',
 }))
 
+const COLUMN_GAP = 48
+const toast = ref('')
+let toastTimer: ReturnType<typeof setTimeout> | null = null
+let resizeObserver: ResizeObserver | null = null
+let lastWheelTurn = 0
+let hideButtonMask = 0
+
+function showToast(msg: string) {
+  toast.value = msg
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => { toast.value = '' }, 1500)
+}
+
 const paragraphs = computed(() =>
   toParagraphs(reader.chapterText, { compressBlankLines: settings.settings?.compressBlankLines ?? true }),
 )
 
 function pageWidth(): number {
   const el = scrollEl.value
-  return el ? el.clientWidth : 0
+  if (!el) return 0
+  const padding = settings.settings?.innerPadding ?? 48
+  const contentWidth = el.clientWidth - padding * 2
+  return Math.max(100, contentWidth) + COLUMN_GAP
+}
+
+function applyColumns() {
+  const el = scrollEl.value
+  if (!el) return
+  if (settings.settings?.pageMode === 'page') {
+    const padding = settings.settings?.innerPadding ?? 48
+    const contentWidth = el.clientWidth - padding * 2
+    el.style.columnWidth = `${Math.max(100, contentWidth)}px`
+  } else {
+    el.style.columnWidth = ''
+  }
 }
 
 function currentPage(): number {
@@ -231,14 +259,38 @@ function zoom(delta: number) {
 }
 
 function onWheel(e: WheelEvent) {
-  // Ctrl/Alt + 滚轮调整窗口透明度（v0.1 统一按同一行为处理）
-  if (!e.ctrlKey && !e.altKey) return
+  // Ctrl/Alt + 滚轮：调整窗口透明度（CSS 层面生效）
+  if (e.ctrlKey || e.altKey) {
+    e.preventDefault()
+    const s = settings.settings!
+    const next = Math.min(1, Math.max(0.3, s.windowOpacity + (e.deltaY > 0 ? -0.05 : 0.05)))
+    void settings.update({ windowOpacity: next })
+    void ipc.setOpacity(next).catch(() => { /* ignore */ })
+    return
+  }
+  // 翻页模式：滚轮上下翻页（节流）；滚动模式：交给默认滚动
+  if (settings.settings?.pageMode !== 'page') return
   e.preventDefault()
-  const s = settings.settings!
-  const next = Math.min(1, Math.max(0.3, s.windowOpacity + (e.deltaY > 0 ? -0.05 : 0.05)))
-  void settings.update({ windowOpacity: next })
-  // R6：v0.1 不实际改变窗口透明度，尽力持久化设置，失败忽略
-  void ipc.setOpacity(next).catch(() => { /* ignore */ })
+  const now = Date.now()
+  if (now - lastWheelTurn < 350) return
+  lastWheelTurn = now
+  if (e.deltaY > 0) nextPage()
+  else prevPage()
+}
+
+function onReaderMouseDown(e: MouseEvent) {
+  if (e.button === 0) hideButtonMask |= 1
+  else if (e.button === 2) hideButtonMask |= 2
+  if (hideButtonMask === 3) {
+    hideButtonMask = 0
+    void ipc.toggleWindowVisible()
+  }
+}
+function onReaderMouseUp() { hideButtonMask = 0 }
+
+async function addBookmarkWithFeedback() {
+  await reader.addBookmarkHere()
+  showToast(zh.reader.bookmarkAdded)
 }
 
 async function pickAndOpen() {
@@ -254,7 +306,8 @@ useHotkeys({
   nextChapter: () => void reader.nextChapter().then(resetScrollToTop),
   prevChapter: () => void reader.prevChapter().then(resetScrollToTop),
   toggleFullscreen, toggleImmersive, toggleAutoPage, toggleSearch, jumpPercent: openJump,
-  addBookmark: () => void reader.addBookmarkHere(),
+  addBookmark: () => void addBookmarkWithFeedback(),
+  toggleWindowVisible: () => void ipc.toggleWindowVisible(),
   openFile: pickAndOpen,
   zoomIn: () => zoom(1), zoomOut: () => zoom(-1), toggleTopmost,
 })
@@ -275,6 +328,11 @@ function onReaderContextMenu(e: MouseEvent) {
   e.preventDefault()
   prevPage()
 }
+
+watch(
+  () => [settings.settings?.pageMode, settings.settings?.innerPadding],
+  () => { void nextTick(applyColumns) },
+)
 
 function onTocJump(i: number) {
   showToc.value = false
@@ -310,18 +368,24 @@ onMounted(async () => {
   if (!book) { void router.push('/'); return }
   await reader.open(book.id, book.filePath, book.currentChapter, book.progress)
   await nextTick()
+  applyColumns()
+  if (!resizeObserver && scrollEl.value) {
+    resizeObserver = new ResizeObserver(() => applyColumns())
+    resizeObserver.observe(scrollEl.value)
+  }
   restoreProgress()
 })
 
 onBeforeUnmount(() => {
   if (autoTimer) clearInterval(autoTimer)
   if (persistTimer) clearTimeout(persistTimer)
+  resizeObserver?.disconnect()
   if (reader.bookId) void reader.persist()
 })
 </script>
 
 <template>
-  <div class="reader" :class="{ immersive: settings.settings?.immersiveMode }">
+  <div class="reader" :class="{ immersive: settings.settings?.immersiveMode }" @mousedown="onReaderMouseDown" @mouseup="onReaderMouseUp">
     <header class="topbar">
       <button class="link" @click="router.push('/')">{{ zh.reader.back }}</button>
       <span class="chapter-title">{{ reader.chapters[reader.currentChapter]?.title ?? '' }}</span>
@@ -377,11 +441,13 @@ onBeforeUnmount(() => {
       />
     </div>
 
+    <div v-if="toast" class="toast">{{ toast }}</div>
+
     <footer class="bottombar">
       <span class="pct">{{ Math.round(reader.overallProgress() * 100) }}%</span>
       <button @click="reader.prevChapter()">{{ zh.reader.prevChapter }}</button>
       <button @click="toggleAutoPage">{{ reader.autoPageOn ? zh.reader.autoStop : zh.reader.autoStart }}</button>
-      <button @click="reader.addBookmarkHere()">{{ zh.reader.addBookmark }}</button>
+      <button @click="addBookmarkWithFeedback()">{{ zh.reader.addBookmark }}</button>
       <button @click="openJump">{{ zh.reader.progress }}</button>
       <button @click="reader.nextChapter()">{{ zh.reader.nextChapter }}</button>
     </footer>
@@ -509,6 +575,19 @@ onBeforeUnmount(() => {
   color: var(--text);
   font-size: 14px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, .2);
+}
+.toast {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, .72);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  z-index: 40;
+  font-size: 13px;
+  pointer-events: none;
 }
 .panel {
   position: absolute;

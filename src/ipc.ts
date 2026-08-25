@@ -22,3 +22,4 @@ export function setFullscreen(full: boolean): Promise<void> { return invokeBook<
 export function setTopmost(top: boolean): Promise<void> { return invokeBook<void>('set_topmost', { top }) }
 export function setOpacity(opacity: number): Promise<void> { return invokeBook<void>('set_opacity', { opacity }) }
 export function setDecorations(decorated: boolean): Promise<void> { return invokeBook<void>('set_decorations', { decorated }) }
+export function toggleWindowVisible(): Promise<void> { return invokeBook<void>('toggle_window_visible') }

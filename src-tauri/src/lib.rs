@@ -12,12 +12,31 @@ use commands::AppState;
 use library::Library;
 use session::SessionManager;
 use tauri::Manager;
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, shortcut, event| {
+                    if event.state() == ShortcutState::Pressed
+                        && shortcut.matches(Modifiers::ALT, Code::KeyH)
+                    {
+                        if let Some(w) = app.get_webview_window("main") {
+                            if w.is_visible().unwrap_or(false) {
+                                let _ = w.hide();
+                            } else {
+                                let _ = w.show();
+                                let _ = w.set_focus();
+                            }
+                        }
+                    }
+                })
+                .build(),
+        )
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
@@ -29,6 +48,9 @@ pub fn run() {
                 settings: std::sync::Mutex::new(settings),
                 data_dir,
             });
+            // Alt+H：全局隐藏/显示窗口
+            let shortcut = Shortcut::new(Some(Modifiers::ALT), Code::KeyH);
+            app.global_shortcut().register(shortcut)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -49,6 +71,7 @@ pub fn run() {
             commands::set_topmost,
             commands::set_opacity,
             commands::set_decorations,
+            commands::toggle_window_visible,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

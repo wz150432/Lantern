@@ -203,6 +203,18 @@ pub fn set_opacity(state: tauri::State<'_, AppState>, opacity: f64) -> AppResult
 }
 
 #[tauri::command]
+pub fn toggle_window_visible(window: Window) -> AppResult<()> {
+    let visible = window.is_visible().map_err(|e| AppError::Invalid(e.to_string()))?;
+    if visible {
+        window.hide().map_err(|e| AppError::Invalid(e.to_string()))?;
+    } else {
+        window.show().map_err(|e| AppError::Invalid(e.to_string()))?;
+        window.set_focus().map_err(|e| AppError::Invalid(e.to_string()))?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
 pub fn set_decorations(window: Window, decorated: bool) -> AppResult<()> {
     window
         .set_decorations(decorated)

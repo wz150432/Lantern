@@ -38,4 +38,5 @@ export function applyTheme(settings: AppSettings) {
   root.style.setProperty('--reader-padding', `${settings.innerPadding}px`)
   root.style.setProperty('--reader-font-family', settings.fontFamily)
   root.style.setProperty('--reader-word-wrap', settings.wordWrap ? 'break-word' : 'normal')
+  root.style.opacity = String(settings.windowOpacity)
 }

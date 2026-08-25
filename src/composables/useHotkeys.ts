@@ -15,6 +15,7 @@ export interface HotkeyHandlers {
   zoomIn?: () => void
   zoomOut?: () => void
   toggleTopmost?: () => void
+  toggleWindowVisible?: () => void
 }
 
 export function useHotkeys(handlers: HotkeyHandlers) {
@@ -31,6 +32,9 @@ export function useHotkeys(handlers: HotkeyHandlers) {
       if (k === '=' || k === '+') { handlers.zoomIn?.(); e.preventDefault(); return }
       if (k === '-') { handlers.zoomOut?.(); e.preventDefault(); return }
       return
+    }
+    if (e.altKey && !e.ctrlKey && !e.shiftKey && (k === 'h' || k === 'H')) {
+      handlers.toggleWindowVisible?.(); e.preventDefault(); return
     }
     if (!e.ctrlKey && !e.shiftKey && !e.altKey) {
       if (k === 'ArrowRight') { handlers.nextPage?.(); e.preventDefault(); return }
