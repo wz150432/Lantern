@@ -26,7 +26,11 @@ export const zh = {
     scrollSpeed: '滚动速度', windowTopmost: '窗口置顶', windowOpacity: '窗口透明度',
     immersiveMode: '沉浸模式（F12）', restoreDefault: '还原默认设置', about: '关于',
     preview: '排版预览', resetConfirm: '确定要还原默认设置吗？',
+    fontSystem: '系统默认', fontSerif: '思源宋体', fontNotoSerif: 'Noto Serif',
+    previewChapter: '第一章 预览', previewBody: '这是排版预览文本，用于实时查看行距、段距、字号与首行缩进的效果。点击设置即刻生效。',
+    version: 'v0.1.0',
   },
   common: { confirm: '确定', cancel: '取消', delete: '删除', close: '关闭' },
 }
 export type ZhDict = typeof zh
+
