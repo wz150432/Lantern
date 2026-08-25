@@ -12,6 +12,7 @@ import TocPanel from '../components/TocPanel.vue'
 import BookmarkPanel from '../components/BookmarkPanel.vue'
 import SearchBar from '../components/SearchBar.vue'
 import * as ipc from '../ipc'
+import type { SearchHit } from '../types'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,6 +25,7 @@ const showToc = ref(false)
 const showBookmarks = ref(false)
 const showSearch = ref(false)
 const isFullscreen = ref(false)
+const activeSearch = ref<{ query: string; hits: SearchHit[] } | null>(null)
 
 const paragraphs = computed(() =>
   toParagraphs(reader.chapterText, { compressBlankLines: settings.settings?.compressBlankLines ?? true })
@@ -166,7 +168,23 @@ async function toggleTopmost() {
   await ipc.setTopmost(next)
 }
 
-function toggleSearch() { showSearch.value = !showSearch.value }
+function toggleSearch() {
+  showSearch.value = !showSearch.value
+  if (!showSearch.value) activeSearch.value = null
+}
+
+function onSearchUpdate(payload: { query: string; hits: SearchHit[] }) {
+  activeSearch.value = payload.query.trim() ? payload : null
+}
+
+function closeSearch() { showSearch.value = false }
+
+function isMarked(text: string): boolean {
+  const s = activeSearch.value
+  if (!s || !s.query.trim()) return false
+  if (!s.hits.some((h) => h.chapterIndex === reader.currentChapter)) return false
+  return text.includes(s.query)
+}
 
 function jumpPercent() {
   const p = Number(prompt(zh.reader.progress, '50'))
@@ -289,8 +307,8 @@ onBeforeUnmount(() => {
       <BookmarkPanel @close="showBookmarks = false" />
     </aside>
 
-    <div v-if="showSearch" class="searchbar-slot">
-      <SearchBar @close="showSearch = false" />
+    <div v-show="showSearch" class="searchbar-slot">
+      <SearchBar @close="closeSearch" @update="onSearchUpdate" />
     </div>
 
     <main
@@ -305,7 +323,7 @@ onBeforeUnmount(() => {
         <p
           v-for="(p, i) in paragraphs"
           :key="i"
-          :class="{ heading: p.isHeading }"
+          :class="{ heading: p.isHeading, marked: isMarked(p.text) }"
         >{{ p.text }}</p>
       </div>
     </main>
@@ -401,6 +419,7 @@ onBeforeUnmount(() => {
   margin: 0 0 var(--reader-para-spacing) 0;
   text-indent: 2em;
 }
+.page-body p.marked { background: rgba(255, 213, 0, .35); border-radius: 2px; }
 .page-body p.heading {
   font-weight: 700;
   text-align: center;
@@ -422,10 +441,7 @@ onBeforeUnmount(() => {
   min-width: 48px;
 }
 .searchbar-slot {
-  position: absolute;
-  top: 52px;
-  right: 16px;
-  z-index: 10;
+  /* SearchBar 自行以 .reader 为包含块定位（.searchbar 为 absolute） */
 }
 .panel {
   position: absolute;

@@ -9,7 +9,7 @@ export const zh = {
   },
   reader: {
     back: '返回书架', chapters: '目录', bookmarks: '书签', prevChapter: '上一章', nextChapter: '下一章',
-    search: '查找', searchPlaceholder: '输入关键字…', noResult: '没有找到匹配内容',
+    search: '查找', searchButton: '搜索', searchPlaceholder: '输入关键字…', searchPrev: '上一个', searchNext: '下一个', noResult: '没有找到匹配内容',
     progress: '进度', bookmarkAdded: '已添加书签', editMode: '编辑模式',
     fileMissing: '文件缺失', relocate: '重新定位文件',
     fullscreen: '全屏', immersive: '沉浸', autoStart: '自动', autoStop: '停止', addBookmark: '书签',
