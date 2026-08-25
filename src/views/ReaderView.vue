@@ -77,11 +77,36 @@ async function resetScrollToTop() {
   else el.scrollTop = 0
 }
 
+function isAtEndOfChapter(): boolean {
+  const el = scrollEl.value
+  if (!el) return false
+  if (settings.settings?.pageMode === 'page') {
+    return currentPage() >= pageCount(el.scrollWidth, pageWidth()) - 1
+  }
+  return el.scrollTop + el.clientHeight >= el.scrollHeight - 1
+}
+
+function isAtStartOfChapter(): boolean {
+  const el = scrollEl.value
+  if (!el) return false
+  if (settings.settings?.pageMode === 'page') return currentPage() <= 0
+  return el.scrollTop <= 0
+}
+
+async function advanceChapterOrStop() {
+  if (reader.currentChapter >= reader.chapters.length - 1) {
+    if (reader.autoPageOn) toggleAutoPage()
+    return
+  }
+  await reader.nextChapter()
+  await resetScrollToTop()
+}
+
 function nextPage() {
   const el = scrollEl.value
   if (!el) return
+  if (isAtEndOfChapter()) { void advanceChapterOrStop(); return }
   if (settings.settings?.pageMode === 'page') {
-    if (currentPage() >= pageCount(el.scrollWidth, pageWidth()) - 1) { void reader.nextChapter().then(resetScrollToTop); return }
     goToPage(currentPage() + 1)
   } else {
     el.scrollBy({ top: el.clientHeight, behavior: 'smooth' })
@@ -92,8 +117,11 @@ function nextPage() {
 function prevPage() {
   const el = scrollEl.value
   if (!el) return
+  if (isAtStartOfChapter()) {
+    if (reader.currentChapter > 0) void reader.prevChapter().then(resetScrollToTop)
+    return
+  }
   if (settings.settings?.pageMode === 'page') {
-    if (currentPage() <= 0) { void reader.prevChapter().then(resetScrollToTop); return }
     goToPage(currentPage() - 1)
   } else {
     el.scrollBy({ top: -el.clientHeight, behavior: 'smooth' })
@@ -108,7 +136,7 @@ function toggleAutoPage() {
     autoTimer = setInterval(() => {
       const el = scrollEl.value
       if (!el) return
-      if (settings.settings?.pageMode === 'page' && currentPage() >= pageCount(el.scrollWidth, pageWidth()) - 1) {
+      if (isAtEndOfChapter()) {
         if (reader.currentChapter >= reader.chapters.length - 1) { toggleAutoPage(); return }
         void reader.nextChapter().then(resetScrollToTop)
         return
@@ -146,9 +174,9 @@ function jumpPercent() {
   const target = Math.min(100, Math.max(0, p)) / 100
   const total = reader.chapters.length
   if (total === 0) return
-  const ch = Math.floor(target * total)
+  const ch = Math.min(Math.floor(target * total), total - 1)
   const frac = target * total - ch
-  void reader.loadChapter(Math.min(ch, total - 1)).then(async () => {
+  void reader.loadChapter(ch).then(async () => {
     await nextTick()
     const el = scrollEl.value
     if (!el) return
@@ -205,15 +233,17 @@ function onTocJump(i: number) {
 }
 
 function restoreProgress() {
-  const el = scrollEl.value
-  if (!el) return
-  if (settings.settings?.pageMode === 'page') {
-    const total = pageCount(el.scrollWidth || 1, pageWidth() || 1)
-    const page = Math.round(reader.chapterProgress * Math.max(0, total - 1))
-    el.scrollTo({ left: scrollLeftFromPage(page, pageWidth()) })
-  } else {
-    el.scrollTop = reader.chapterProgress * Math.max(0, el.scrollHeight - el.clientHeight)
-  }
+  requestAnimationFrame(() => {
+    const el = scrollEl.value
+    if (!el) return
+    if (settings.settings?.pageMode === 'page') {
+      const total = pageCount(el.scrollWidth || 1, pageWidth() || 1)
+      const page = Math.round(reader.chapterProgress * Math.max(0, total - 1))
+      el.scrollTo({ left: scrollLeftFromPage(page, pageWidth()) })
+    } else {
+      el.scrollTop = reader.chapterProgress * Math.max(0, el.scrollHeight - el.clientHeight)
+    }
+  })
 }
 
 onMounted(async () => {

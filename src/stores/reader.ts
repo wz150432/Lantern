@@ -18,7 +18,7 @@ export const useReaderStore = defineStore('reader', () => {
     bookId.value = id
     bookPath.value = path
     chapters.value = await ipc.getChapters(id, path)
-    currentChapter.value = Math.min(savedChapter, Math.max(0, chapters.value.length - 1))
+    currentChapter.value = Math.min(Math.max(0, savedChapter), Math.max(0, chapters.value.length - 1))
     await loadChapter(currentChapter.value)
     bookmarks.value = await ipc.getBookmarks(id)
     if (savedProgress > 0) chapterProgress.value = Math.min(1, savedProgress)
