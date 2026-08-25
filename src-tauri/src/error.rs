@@ -36,6 +36,11 @@ impl From<rusqlite::Error> for AppError {
     }
 }
 
+impl From<AppError> for tauri::ipc::InvokeError {
+    fn from(e: AppError) -> Self {
+        tauri::ipc::InvokeError::from(e.to_string())
+    }
+}
 impl From<serde_json::Error> for AppError {
     fn from(e: serde_json::Error) -> Self {
         AppError::Storage(format!("JSON: {e}"))

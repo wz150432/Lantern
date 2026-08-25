@@ -1,5 +1,5 @@
 use crate::error::{AppError, AppResult};
-use crate::models::{BookRecord, Bookmark};
+use crate::models::{AppSettings, BookRecord, Bookmark};
 use crate::storage::Storage;
 use std::path::Path;
 
@@ -144,6 +144,13 @@ impl Library {
     }
     pub fn delete_bookmark(&self, id: i64) -> AppResult<()> {
         self.storage.delete_bookmark(id)
+    }
+    pub fn load_settings(&self) -> AppResult<AppSettings> {
+        self.storage.load_settings()
+    }
+
+    pub fn save_settings(&self, settings: &AppSettings) -> AppResult<()> {
+        self.storage.save_settings(settings)
     }
     pub fn books_dir(&self) -> &Path {
         &self.books_dir

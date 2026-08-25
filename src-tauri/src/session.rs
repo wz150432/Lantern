@@ -1,7 +1,7 @@
 use crate::error::{AppError, AppResult};
 use crate::models::{BookMeta, ChapterInfo};
-use crate::parsers::BookFormat;
 use crate::parsers::txt::TxtBook;
+use crate::parsers::BookFormat;
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -15,6 +15,11 @@ pub struct SessionManager {
     entries: HashMap<i64, SessionEntry>,
 }
 
+impl Default for SessionManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl SessionManager {
     pub fn new() -> Self {
         Self {
@@ -78,13 +83,14 @@ impl SessionManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::NamedTempFile;
     use std::io::Write;
+    use tempfile::NamedTempFile;
 
     #[test]
     fn open_and_read_chapter() {
         let mut f = NamedTempFile::new().unwrap();
-        f.write_all("第一章 甲\n内容。\n第二章 乙\n内容。\n".as_bytes()).unwrap();
+        f.write_all("第一章 甲\n内容。\n第二章 乙\n内容。\n".as_bytes())
+            .unwrap();
         let mut sm = SessionManager::new();
         sm.open(1, f.path(), None).unwrap();
         let chapters = sm.chapters(1).unwrap();
