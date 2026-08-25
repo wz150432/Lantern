@@ -1,5 +1,5 @@
 export const zh = {
-  appName: '阅读器',
+  appName: 'Lantern',
   shelf: {
     title: '书架', all: '全部', recent: '最近阅读', unfinished: '未读完', bookmarked: '书签',
     importBook: '导入书籍', openFile: '打开文件', searchPlaceholder: '搜索书架…', bookFilter: '书籍',

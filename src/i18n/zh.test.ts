@@ -3,7 +3,7 @@ import { zh } from './zh'
 
 describe('zh dict', () => {
   it('has app name', () => {
-    expect(zh.appName).toBe('阅读器')
+    expect(zh.appName).toBe('Lantern')
   })
   it('has shelf copy', () => {
     expect(zh.shelf.title).toBe('书架')

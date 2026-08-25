@@ -1,4 +1,4 @@
-# 阅读器（Reader）
+# Lantern（阅读器）
 
 跨平台离线小说阅读器：Windows / macOS / Linux。
 纯本地阅读，不联网、不爬虫、不收集数据。TXT / EPUB（EPUB 二期）。
