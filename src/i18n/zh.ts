@@ -13,6 +13,7 @@ export const zh = {
     progress: '进度', bookmarkAdded: '已添加书签', editMode: '编辑模式',
     fileMissing: '文件缺失', relocate: '重新定位文件',
     fullscreen: '全屏', immersive: '沉浸', autoStart: '自动', autoStop: '停止', addBookmark: '书签',
+    noBookmarks: '暂无书签（Ctrl+M 添加）',
   },
   settings: {
     title: '设置', display: '显示', typography: '排版', reading: '阅读', window: '窗口', advanced: '高级',
