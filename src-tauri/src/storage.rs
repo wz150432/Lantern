@@ -14,6 +14,7 @@ impl Storage {
         let db_path = data_dir.join("library.db");
         let db = Connection::open(&db_path)?;
         db.pragma_update(None, "journal_mode", "WAL")?;
+        db.pragma_update(None, "foreign_keys", "ON")?;
         db.execute_batch(
             "CREATE TABLE IF NOT EXISTS books (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -138,12 +139,13 @@ impl Storage {
         let raw = std::fs::read_to_string(&self.settings_path)?;
         let parsed: serde_json::Value = serde_json::from_str(&raw)?;
         let defaults = AppSettings::default();
+        let default_font_family = defaults.font_family.clone();
         let mut merged = defaults;
         if let Some(v) = parsed.get("theme") {
             merged.theme = v.as_str().unwrap_or("minimal").into();
         }
         if let Some(v) = parsed.get("fontFamily") {
-            merged.font_family = v.as_str().unwrap_or("").into();
+            merged.font_family = v.as_str().unwrap_or(default_font_family.as_str()).into();
         }
         if let Some(v) = parsed.get("fontSize") {
             merged.font_size = v.as_f64().unwrap_or(18.0);
@@ -290,6 +292,41 @@ mod tests {
         assert_eq!(list[0].note.as_deref(), Some("名场面"));
         s.delete_bookmark(bm_id).unwrap();
         assert_eq!(s.list_bookmarks(id).unwrap().len(), 0);
+    }
+
+    #[test]
+    fn delete_book_cascades_to_bookmarks() {
+        let (_d, s) = open_storage();
+        let id = s.upsert_book(&sample_book(0)).unwrap();
+        let bm = Bookmark {
+            id: 0,
+            book_id: id,
+            chapter_index: 0,
+            position: 0.0,
+            note: None,
+            created_at: 1000,
+        };
+        s.add_bookmark(&bm).unwrap();
+        assert_eq!(s.list_bookmarks(id).unwrap().len(), 1);
+        s.delete_book(id).unwrap();
+        assert!(s.list_bookmarks(id).unwrap().is_empty());
+    }
+
+    #[test]
+    fn upsert_existing_book_updates_in_place() {
+        let (_d, s) = open_storage();
+        let id = s.upsert_book(&sample_book(0)).unwrap();
+        let mut updated = sample_book(id);
+        updated.title = "更新标题".into();
+        updated.author = Some("新作者".into());
+        updated.progress = 0.75;
+        let returned = s.upsert_book(&updated).unwrap();
+        assert_eq!(returned, id);
+        let got = s.get_book(id).unwrap().unwrap();
+        assert_eq!(got.title, "更新标题");
+        assert_eq!(got.author.as_deref(), Some("新作者"));
+        assert!((got.progress - 0.75).abs() < 1e-6);
+        assert_eq!(s.list_books().unwrap().len(), 1);
     }
 
     #[test]
