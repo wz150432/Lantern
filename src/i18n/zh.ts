@@ -2,7 +2,8 @@ export const zh = {
   appName: '阅读器',
   shelf: {
     title: '书架', all: '全部', recent: '最近阅读', unfinished: '未读完', bookmarked: '书签',
-    importBook: '导入书籍', openFile: '打开文件', searchPlaceholder: '搜索书架…',
+    importBook: '导入书籍', openFile: '打开文件', searchPlaceholder: '搜索书架…', bookFilter: '书籍',
+    importPrompt: '复制进书库？确定复制，取消则链接原文件（不移动原文件）', deleteCopyPrompt: '同时删除书库副本文件？',
     empty: '书架还是空的，点击"导入书籍"或"打开文件"开始阅读',
     recentBar: '最近阅读', addToShelf: '加入书架', remove: '删除记录', showInFolder: '在文件夹中显示',
   },
@@ -27,3 +28,4 @@ export const zh = {
   common: { confirm: '确定', cancel: '取消', delete: '删除', close: '关闭' },
 }
 export type ZhDict = typeof zh
+
