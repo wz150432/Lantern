@@ -48,9 +48,11 @@ pub fn run() {
                 settings: std::sync::Mutex::new(settings),
                 data_dir,
             });
-            // Alt+H：全局隐藏/显示窗口
+            // Alt+H：全局隐藏/显示窗口（注册失败不阻断启动，仅告警）
             let shortcut = Shortcut::new(Some(Modifiers::ALT), Code::KeyH);
-            app.global_shortcut().register(shortcut)?;
+            if let Err(e) = app.global_shortcut().register(shortcut) {
+                eprintln!("警告：Alt+H 全局快捷键注册失败（可能已被其它程序占用）：{e}");
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

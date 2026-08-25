@@ -27,6 +27,16 @@ export const THEME_PRESETS: ThemePreset[] = [
   },
 ]
 
+function hexToRgba(hex: string, alpha: number): string {
+  const m = hex.replace('#', '')
+  const full = m.length === 3 ? m.split('').map((c) => c + c).join('') : m
+  const num = parseInt(full, 16)
+  const r = (num >> 16) & 255
+  const g = (num >> 8) & 255
+  const b = num & 255
+  return `rgba(${r}, ${g}, ${b}, ${Math.min(1, Math.max(0, alpha))})`
+}
+
 export function applyTheme(settings: AppSettings) {
   const preset = THEME_PRESETS.find((p) => p.id === settings.theme) ?? THEME_PRESETS[0]
   const root = document.documentElement
@@ -38,5 +48,7 @@ export function applyTheme(settings: AppSettings) {
   root.style.setProperty('--reader-padding', `${settings.innerPadding}px`)
   root.style.setProperty('--reader-font-family', settings.fontFamily)
   root.style.setProperty('--reader-word-wrap', settings.wordWrap ? 'break-word' : 'normal')
-  root.style.opacity = String(settings.windowOpacity)
+  const preset0 = THEME_PRESETS.find((p) => p.id === settings.theme) ?? THEME_PRESETS[0]
+  const bg = preset0.vars['--reader-bg'] ?? '#f5f4f1'
+  root.style.setProperty('--reader-bg-rgba', hexToRgba(bg, settings.windowOpacity))
 }

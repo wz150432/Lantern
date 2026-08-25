@@ -6,6 +6,7 @@ import { useSettingsStore } from '../stores/settings'
 import { useLibraryStore } from '../stores/library'
 import { toParagraphs } from '../reader/text'
 import { pageCount, pageIndexFromScroll, scrollLeftFromPage } from '../reader/pagination'
+import { streamCharPosition } from '../reader/stream'
 import { useHotkeys } from '../composables/useHotkeys'
 import { zh } from '../i18n/zh'
 import TocPanel from '../components/TocPanel.vue'
@@ -40,6 +41,9 @@ let toastTimer: ReturnType<typeof setTimeout> | null = null
 let resizeObserver: ResizeObserver | null = null
 let lastWheelTurn = 0
 let hideButtonMask = 0
+const streamTexts = ref<string[]>([])
+const streamIndices = ref<number[]>([])
+const decorated = ref(true)
 
 function showToast(msg: string) {
   toast.value = msg
@@ -48,8 +52,16 @@ function showToast(msg: string) {
 }
 
 const paragraphs = computed(() =>
-  toParagraphs(reader.chapterText, { compressBlankLines: settings.settings?.compressBlankLines ?? true }),
+  toParagraphs(
+    [reader.chapterText, ...streamTexts.value].join('\n'),
+    { compressBlankLines: settings.settings?.compressBlankLines ?? true },
+  ),
 )
+
+watch(() => reader.chapterText, () => {
+  streamTexts.value = []
+  streamIndices.value = []
+})
 
 function pageWidth(): number {
   const el = scrollEl.value
@@ -93,6 +105,48 @@ function schedulePersist() {
   persistTimer = setTimeout(() => { void reader.persist() }, 300)
 }
 
+function linePx(): number {
+  const pb = document.querySelector('.page-body')
+  if (pb) {
+    const lh = parseFloat(getComputedStyle(pb).lineHeight)
+    if (Number.isFinite(lh) && lh > 0) return lh
+  }
+  const fs = settings.settings?.fontSize ?? 18
+  const lhf = settings.settings?.lineHeight ?? 1.8
+  return fs * lhf
+}
+
+function streamPos() {
+  const el = scrollEl.value
+  if (!el) return { chapterIndex: reader.currentChapter, frac: 0 }
+  return streamCharPosition({
+    scrollTop: el.scrollTop,
+    maxScroll: el.scrollHeight - el.clientHeight,
+    texts: [reader.chapterText, ...streamTexts.value],
+    startIndex: reader.currentChapter,
+    totalChapters: reader.chapters.length,
+  })
+}
+
+async function maybeAppendChapter() {
+  const el = scrollEl.value
+  if (!el) return
+  if (settings.settings?.pageMode !== 'scroll') return
+  const remaining = el.scrollHeight - el.scrollTop - el.clientHeight
+  if (remaining > 240) return
+  const lastLoaded = streamIndices.value.length
+    ? streamIndices.value[streamIndices.value.length - 1]
+    : reader.currentChapter
+  if (lastLoaded >= reader.chapters.length - 1) return
+  const next = lastLoaded + 1
+  const text = await ipc.getChapterText(reader.bookId, next)
+  streamTexts.value = [...streamTexts.value, text]
+  streamIndices.value = [...streamIndices.value, next]
+  await nextTick()
+  syncProgressFromScroll()
+  void maybeAppendChapter()
+}
+
 function syncProgressFromScroll() {
   const el = scrollEl.value
   if (!el) return
@@ -101,8 +155,10 @@ function syncProgressFromScroll() {
     const page = pageIndexFromScroll(el.scrollLeft, pageWidth() || 1)
     reader.chapterProgress = total > 1 ? page / (total - 1) : 1
   } else {
-    const max = el.scrollHeight - el.clientHeight
-    reader.chapterProgress = max > 0 ? el.scrollTop / max : 1
+    const pos = streamPos()
+    reader.currentChapter = pos.chapterIndex
+    reader.chapterProgress = pos.frac
+    void maybeAppendChapter()
   }
   schedulePersist()
 }
@@ -193,11 +249,9 @@ async function toggleFullscreen() {
 }
 
 async function toggleImmersive() {
-  const next = !settings.settings!.immersiveMode
-  await settings.update({ immersiveMode: next })
-  // 退出沉浸恢复装饰；透明度 < 1 时保留窗口装饰（macOS 透明 + 无边框组合受限，属已知降级）
-  const decorated = !next || settings.settings!.windowOpacity < 1
-  await ipc.setDecorations(decorated)
+  // F12：切换系统窗口边框（标题栏），不影响应用内顶栏
+  decorated.value = !decorated.value
+  await ipc.setDecorations(decorated.value)
 }
 
 async function toggleTopmost() {
@@ -270,8 +324,18 @@ function onWheel(e: WheelEvent) {
     void ipc.setOpacity(next).catch(() => { /* ignore */ })
     return
   }
-  // 翻页模式：滚轮上下翻页（节流）；滚动模式：交给默认滚动
-  if (settings.settings?.pageMode !== 'page') return
+  // 滚动模式：逐行滚动（速度可调），章节自动续接
+  if (settings.settings?.pageMode !== 'page') {
+    e.preventDefault()
+    const el = scrollEl.value
+    if (!el) return
+    const lines = Math.max(1, settings.settings?.scrollSpeed ?? 1)
+    const dy = linePx() * lines * (e.deltaY > 0 ? 1 : -1)
+    el.scrollBy({ top: dy })
+    syncProgressFromScroll()
+    return
+  }
+  // 翻页模式：滚轮上下翻页（节流）
   e.preventDefault()
   const now = Date.now()
   if (now - lastWheelTurn < 350) return
@@ -307,8 +371,18 @@ async function pickAndOpen() {
   router.push({ path: '/reader', query: { id: String(rec.id) } })
 }
 
+function scrollLines(direction: number) {
+  if (settings.settings?.pageMode !== 'scroll') return
+  const el = scrollEl.value
+  if (!el) return
+  const lines = Math.max(1, settings.settings?.scrollSpeed ?? 1)
+  el.scrollBy({ top: linePx() * lines * direction })
+  syncProgressFromScroll()
+}
+
 useHotkeys({
   nextPage, prevPage,
+  scrollUp: () => scrollLines(-1), scrollDown: () => scrollLines(1),
   nextChapter: () => void reader.nextChapter().then(resetScrollToTop),
   prevChapter: () => void reader.prevChapter().then(resetScrollToTop),
   toggleFullscreen, toggleImmersive, toggleAutoPage, toggleSearch, jumpPercent: openJump,
@@ -392,7 +466,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="reader" :class="{ immersive: settings.settings?.immersiveMode }" @mousedown="onReaderMouseDown" @mouseup="onReaderMouseUp">
-    <header class="topbar">
+    <header class="topbar" data-tauri-drag-region>
       <button class="link" @click="router.push('/')">{{ zh.reader.back }}</button>
       <span class="chapter-title">{{ reader.chapters[reader.currentChapter]?.title ?? '' }}</span>
       <div class="top-actions">
@@ -400,7 +474,7 @@ onBeforeUnmount(() => {
         <button @click="showBookmarks = !showBookmarks">{{ zh.reader.bookmarks }}</button>
         <button @click="toggleSearch">{{ zh.reader.search }}</button>
         <button @click="toggleFullscreen">{{ zh.reader.fullscreen }}</button>
-        <button @click="toggleImmersive">{{ zh.reader.immersive }}</button>
+        <button @click="toggleImmersive">{{ decorated ? zh.reader.hideBorder : zh.reader.showBorder }}</button>
         <button @click="router.push('/settings')">{{ zh.settings.title }}</button>
       </div>
     </header>
@@ -466,7 +540,7 @@ onBeforeUnmount(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--reader-bg);
+  background: var(--reader-bg-rgba, var(--reader-bg));
   color: var(--reader-text);
 }
 .topbar {
@@ -518,6 +592,11 @@ onBeforeUnmount(() => {
   overflow-x: hidden;
   overflow-y: auto;
   padding: 0 var(--reader-padding);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.reader-scroll::-webkit-scrollbar {
+  display: none;
 }
 .reader-scroll.page-mode {
   overflow-x: auto;

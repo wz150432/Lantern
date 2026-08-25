@@ -18,7 +18,7 @@ describe('zh dict', () => {
   it('has settings copy', () => {
     expect(zh.settings.title).toBe('设置')
     expect(zh.settings.theme).toBe('主题')
-    expect(zh.settings.immersiveMode).toBe('沉浸模式（F12）')
+    expect(zh.settings.immersiveMode).toContain('隐藏顶栏/底栏')
   })
   it('has common copy', () => {
     expect(zh.common.confirm).toBe('确定')

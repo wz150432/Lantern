@@ -3,6 +3,8 @@ import { onMounted, onUnmounted } from 'vue'
 export interface HotkeyHandlers {
   nextPage?: () => void
   prevPage?: () => void
+  scrollUp?: () => void
+  scrollDown?: () => void
   nextChapter?: () => void
   prevChapter?: () => void
   toggleFullscreen?: () => void
@@ -37,6 +39,8 @@ export function useHotkeys(handlers: HotkeyHandlers) {
       handlers.toggleWindowVisible?.(); e.preventDefault(); return
     }
     if (!e.ctrlKey && !e.shiftKey && !e.altKey) {
+      if (k === 'ArrowUp') { handlers.scrollUp?.(); e.preventDefault(); return }
+      if (k === 'ArrowDown') { handlers.scrollDown?.(); e.preventDefault(); return }
       if (k === 'ArrowRight') { handlers.nextPage?.(); e.preventDefault(); return }
       if (k === 'ArrowLeft') { handlers.prevPage?.(); e.preventDefault(); return }
       if (k === ' ') { handlers.toggleAutoPage?.(); e.preventDefault(); return }
