@@ -15,7 +15,8 @@ use session::SessionManager;
 use tauri::Manager;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
-use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+use std::str::FromStr;
+use tauri_plugin_global_shortcut::{Shortcut, ShortcutState};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -28,20 +29,34 @@ pub fn run() {
                     if event.state() != ShortcutState::Pressed {
                         return;
                     }
-                    if shortcut.matches(Modifiers::ALT, Code::KeyH) {
-                        if let Some(w) = app.get_webview_window("main") {
-                            if w.is_visible().unwrap_or(false) {
-                                let _ = w.hide();
-                            } else {
-                                let _ = w.show();
-                                let _ = w.set_focus();
+                    let Some(state) = app.try_state::<AppState>() else { return };
+                    let settings = state.settings.lock().unwrap();
+                    let wh = settings
+                        .hotkeys
+                        .get("toggleWindowVisible")
+                        .cloned()
+                        .unwrap_or_else(|| "Alt+H".into());
+                    let ah = settings
+                        .hotkeys
+                        .get("toggleAutoHide")
+                        .cloned()
+                        .unwrap_or_else(|| "Ctrl+Alt+Shift+P".into());
+                    drop(settings);
+                    if let Ok(parsed) = Shortcut::from_str(&wh) {
+                        if shortcut == &parsed {
+                            if let Some(w) = app.get_webview_window("main") {
+                                if w.is_visible().unwrap_or(false) {
+                                    let _ = w.hide();
+                                } else {
+                                    let _ = w.show();
+                                    let _ = w.set_focus();
+                                }
                             }
+                            return;
                         }
-                    } else if shortcut.matches(
-                        Modifiers::CONTROL | Modifiers::SHIFT | Modifiers::ALT,
-                        Code::KeyP,
-                    ) {
-                        if let Some(state) = app.try_state::<AppState>() {
+                    }
+                    if let Ok(parsed) = Shortcut::from_str(&ah) {
+                        if shortcut == &parsed {
                             let _ = commands::toggle_auto_hide_inner(&state);
                         }
                     }
@@ -59,29 +74,13 @@ pub fn run() {
                 sessions: std::sync::Mutex::new(SessionManager::new()),
                 settings: std::sync::Mutex::new(settings),
                 auto_hide: auto_hide.clone(),
+                auto_hide_started: Arc::new(AtomicBool::new(false)),
+                global_shortcuts: std::sync::Mutex::new(Vec::new()),
                 data_dir,
             });
-            // Alt+H：全局隐藏/显示窗口（注册失败不阻断启动，仅告警）
-            let shortcut = Shortcut::new(Some(Modifiers::ALT), Code::KeyH);
-            if let Err(e) = app.global_shortcut().register(shortcut) {
-                eprintln!("警告：Alt+H 全局快捷键注册失败（可能已被其它程序占用）：{e}");
-            }
-            // Ctrl+Alt+Shift+P：切换“鼠标移出自动隐藏”
-            let ah_shortcut = Shortcut::new(
-                Some(Modifiers::CONTROL | Modifiers::SHIFT | Modifiers::ALT),
-                Code::KeyP,
-            );
-            if let Err(e) = app.global_shortcut().register(ah_shortcut) {
-                eprintln!("警告：Ctrl+Shift+Alt+Delete 全局快捷键注册失败：{e}");
-            }
-            // Windows：启动鼠标位置追踪线程（自动隐藏）
-            #[cfg(target_os = "windows")]
-            {
-                if let Some(w) = app.get_webview_window("main") {
-                    let hwnd = w.hwnd().map_err(|e| e.to_string())?.0 as usize;
-                    auto_hide::start(hwnd, auto_hide.clone());
-                }
-            }
+            // 全局快捷键跟随用户录制；自动隐藏线程懒启动
+            commands::reload_global_hotkeys(app.handle());
+            commands::ensure_auto_hide(app.handle(), &app.state::<AppState>());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -104,6 +103,7 @@ pub fn run() {
             commands::set_decorations,
             commands::toggle_window_visible,
             commands::toggle_auto_hide,
+            commands::sync_global_hotkeys,
             commands::exit_app,
         ])
         .run(tauri::generate_context!())

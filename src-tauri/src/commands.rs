@@ -5,15 +5,75 @@ use crate::search::SearchHit;
 use crate::session::SessionManager;
 use std::path::Path;
 use std::sync::Mutex;
-use tauri::Window;
+use std::str::FromStr;
+use tauri::{Manager, Window};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
 
 pub struct AppState {
     pub library: Mutex<Library>,
     pub sessions: Mutex<SessionManager>,
     pub settings: Mutex<AppSettings>,
     pub auto_hide: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    pub auto_hide_started: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    pub global_shortcuts: std::sync::Mutex<Vec<Shortcut>>,
     pub data_dir: std::path::PathBuf,
 }
+
+/// 全局快捷键跟随用户录制的键位（隐藏/显示窗口、自动隐藏开关）。
+pub fn reload_global_hotkeys(app: &tauri::AppHandle) {
+    let Some(state) = app.try_state::<AppState>() else { return };
+    let settings = state.settings.lock().unwrap();
+    let wh = settings
+        .hotkeys
+        .get("toggleWindowVisible")
+        .cloned()
+        .unwrap_or_else(|| "Alt+H".into());
+    let ah = settings
+        .hotkeys
+        .get("toggleAutoHide")
+        .cloned()
+        .unwrap_or_else(|| "Ctrl+Alt+Shift+P".into());
+    drop(settings);
+
+    let gs = app.global_shortcut();
+    {
+        let mut regs = state.global_shortcuts.lock().unwrap();
+        for s in regs.iter() {
+            let _ = gs.unregister(*s);
+        }
+        regs.clear();
+    }
+    let mut regs = Vec::new();
+    for combo in [wh, ah] {
+        match Shortcut::from_str(&combo) {
+            Ok(s) => match gs.register(s) {
+                Ok(_) => regs.push(s),
+                Err(e) => eprintln!("警告：全局快捷键注册失败 {combo}: {e}"),
+            },
+            Err(e) => eprintln!("警告：无法解析全局快捷键 {combo}: {e}"),
+        }
+    }
+    *state.global_shortcuts.lock().unwrap() = regs;
+}
+
+/// 启动鼠标位置追踪线程（懒启动：窗口就绪后第一次调用时生效）。
+#[cfg(target_os = "windows")]
+pub fn ensure_auto_hide(app: &tauri::AppHandle, state: &AppState) {
+    if state
+        .auto_hide_started
+        .swap(true, std::sync::atomic::Ordering::SeqCst)
+    {
+        return;
+    }
+    if let Some(w) = app.get_webview_window("main") {
+        if let Ok(hwnd) = w.hwnd() {
+            crate::auto_hide::start(hwnd.0 as usize, state.auto_hide.clone());
+        }
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn ensure_auto_hide(_app: &tauri::AppHandle, _state: &AppState) {}
 
 pub fn toggle_auto_hide_inner(state: &AppState) -> AppResult<bool> {
     let next = {
@@ -236,8 +296,15 @@ pub fn toggle_window_visible(window: Window) -> AppResult<()> {
 }
 
 #[tauri::command]
-pub fn toggle_auto_hide(state: tauri::State<'_, AppState>) -> AppResult<bool> {
+pub fn toggle_auto_hide(state: tauri::State<'_, AppState>, app: tauri::AppHandle) -> AppResult<bool> {
+    ensure_auto_hide(&app, &state);
     toggle_auto_hide_inner(&state)
+}
+
+#[tauri::command]
+pub fn sync_global_hotkeys(app: tauri::AppHandle) -> AppResult<()> {
+    reload_global_hotkeys(&app);
+    Ok(())
 }
 
 #[tauri::command]

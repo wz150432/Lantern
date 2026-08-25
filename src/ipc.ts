@@ -25,3 +25,4 @@ export function setDecorations(decorated: boolean): Promise<void> { return invok
 export function toggleWindowVisible(): Promise<void> { return invokeBook<void>('toggle_window_visible') }
 export function exitApp(): Promise<void> { return invokeBook<void>('exit_app') }
 export function toggleAutoHide(): Promise<boolean> { return invokeBook<boolean>('toggle_auto_hide') }
+export function syncGlobalHotkeys(): Promise<void> { return invokeBook<void>('sync_global_hotkeys') }

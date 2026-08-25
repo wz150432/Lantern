@@ -63,12 +63,14 @@ async function onRecordKey(e: KeyboardEvent) {
   }
   const hotkeys = { ...(settings.settings?.hotkeys ?? {}), [recordingId.value]: combo }
   await settings.update({ hotkeys })
+  await ipc.syncGlobalHotkeys()
   conflictMsg.value = ''
   recordingId.value = null
 }
 
 async function resetHotkeys() {
   await settings.update({ hotkeys: {} })
+  await ipc.syncGlobalHotkeys()
   conflictMsg.value = ''
 }
 
