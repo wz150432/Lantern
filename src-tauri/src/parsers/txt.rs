@@ -1,4 +1,4 @@
-use crate::encodings::{decode_bytes, detect_encoding, DetectedEncoding};
+use crate::encodings::{detect_encoding, DetectedEncoding};
 use crate::error::{AppError, AppResult};
 use crate::models::{BookMeta, ChapterInfo};
 use crate::parsers::BookFormat;
@@ -20,7 +20,6 @@ impl TxtBook {
     pub fn open(path: &Path, custom_regex: Option<&str>) -> AppResult<TxtBook> {
         let bytes = std::fs::read(path)?;
         let encoding = detect_encoding(&bytes);
-        let text = decode_bytes(&bytes)?;
         let regex = match custom_regex {
             Some(r) if !r.trim().is_empty() => {
                 Some(Regex::new(r).map_err(|e| AppError::Invalid(format!("正则无效: {e}")))?)
@@ -36,43 +35,7 @@ impl TxtBook {
 
         let default_regex = Self::default_regex();
         let re = regex.as_ref().unwrap_or(&default_regex);
-        let total_chars = text.chars().count();
-        let mut chapters: Vec<ChapterInfo> = Vec::new();
-        let mut current_title = title.clone();
-        let mut current_start = 0usize;
-        let mut line_start = 0usize;
-        let mut seen_title = false;
-
-        for line in text.lines() {
-            let line_end = line_start + line.chars().count();
-            let next_start = if line_end < total_chars {
-                line_end + 1
-            } else {
-                line_end
-            };
-
-            if re.is_match(line.trim()) && !line.trim().is_empty() {
-                if seen_title {
-                    chapters.push(ChapterInfo {
-                        index: chapters.len(),
-                        title: current_title.clone(),
-                        offset: byte_offset(&text, current_start),
-                        length: byte_offset(&text, line_start) - byte_offset(&text, current_start),
-                    });
-                }
-                current_title = line.trim().to_string();
-                current_start = line_start;
-                seen_title = true;
-            }
-            line_start = next_start;
-        }
-
-        chapters.push(ChapterInfo {
-            index: chapters.len(),
-            title: current_title.clone(),
-            offset: byte_offset(&text, current_start),
-            length: byte_offset(&text, total_chars) - byte_offset(&text, current_start),
-        });
+        let chapters = build_chapters(&bytes, encoding, &title, re);
 
         let meta = BookMeta {
             title: title.clone(),
@@ -103,12 +66,171 @@ impl TxtBook {
     }
 }
 
-/// 计算 UTF-8 字符串中字符偏移 `char_pos` 对应的字节偏移。
-fn byte_offset(text: &str, char_pos: usize) -> u64 {
-    text.char_indices()
-        .nth(char_pos)
-        .map(|(b, _)| b as u64)
-        .unwrap_or(text.len() as u64)
+/// 按行扫描原始字节，构建章节索引。ChapterInfo.offset/length 均为原始文件字节偏移。
+fn build_chapters(
+    bytes: &[u8],
+    encoding: DetectedEncoding,
+    title: &str,
+    re: &Regex,
+) -> Vec<ChapterInfo> {
+    let bom = match encoding {
+        DetectedEncoding::Utf8 if bytes.starts_with(&[0xEF, 0xBB, 0xBF]) => 3usize,
+        DetectedEncoding::Utf16Le if bytes.starts_with(&[0xFF, 0xFE]) => 2usize,
+        DetectedEncoding::Utf16Be if bytes.starts_with(&[0xFE, 0xFF]) => 2usize,
+        _ => 0usize,
+    };
+    let body = &bytes[bom..];
+    match encoding {
+        DetectedEncoding::Utf8 | DetectedEncoding::Gbk => {
+            scan_ascii(body, bom as u64, title, re, encoding)
+        }
+        DetectedEncoding::Utf16Le | DetectedEncoding::Utf16Be => {
+            scan_utf16(body, bom as u64, title, re, encoding)
+        }
+    }
+}
+
+/// UTF-8/GBK：换行符为 0x0A，与编码无关，直接按原始字节分行。
+fn scan_ascii(
+    body: &[u8],
+    base: u64,
+    title: &str,
+    re: &Regex,
+    encoding: DetectedEncoding,
+) -> Vec<ChapterInfo> {
+    let mut chapters = Vec::new();
+    let mut current_title = title.to_string();
+    let mut current_start = 0usize;
+    let mut line_start = 0usize;
+    let mut seen_title = false;
+    let mut pos = 0usize;
+
+    loop {
+        if pos > body.len() {
+            break;
+        }
+        match body[pos..].iter().position(|&b| b == b'\n') {
+            Some(rel) => {
+                let nl = pos + rel;
+                let content_end = if nl > line_start && body[nl - 1] == b'\r' {
+                    nl - 1
+                } else {
+                    nl
+                };
+                let text = decode_with(&body[line_start..content_end], encoding);
+                if is_title(&text, re) {
+                    if seen_title {
+                        chapters.push(ChapterInfo {
+                            index: chapters.len(),
+                            title: current_title.clone(),
+                            offset: base + current_start as u64,
+                            length: (line_start - current_start) as u64,
+                        });
+                    }
+                    current_title = text.trim().to_string();
+                    current_start = line_start;
+                    seen_title = true;
+                }
+                line_start = nl + 1;
+                pos = nl + 1;
+            }
+            None => {
+                let content_end = if body.len() > line_start && body[body.len() - 1] == b'\r' {
+                    body.len() - 1
+                } else {
+                    body.len()
+                };
+                let text = decode_with(&body[line_start..content_end], encoding);
+                if is_title(&text, re) {
+                    if seen_title {
+                        chapters.push(ChapterInfo {
+                            index: chapters.len(),
+                            title: current_title.clone(),
+                            offset: base + current_start as u64,
+                            length: (line_start - current_start) as u64,
+                        });
+                    }
+                    current_title = text.trim().to_string();
+                    current_start = line_start;
+                }
+                break;
+            }
+        }
+    }
+
+    chapters.push(ChapterInfo {
+        index: chapters.len(),
+        title: current_title,
+        offset: base + current_start as u64,
+        length: (body.len() - current_start) as u64,
+    });
+    chapters
+}
+
+/// UTF-16：整体解码后扫描文本行，原始字节偏移按 BMP 字符数 ×2 换算。
+fn scan_utf16(
+    body: &[u8],
+    base: u64,
+    title: &str,
+    re: &Regex,
+    encoding: DetectedEncoding,
+) -> Vec<ChapterInfo> {
+    let text = decode_with(body, encoding);
+    let mut chapters = Vec::new();
+    let mut current_title = title.to_string();
+    let mut current_start = 0usize;
+    let mut seen_title = false;
+
+    let mut lines = Vec::new();
+    let mut char_offset = 0usize;
+    for segment in text.split('\n') {
+        lines.push((segment, char_offset));
+        char_offset += segment.chars().count() + 1;
+    }
+    if text.ends_with('\n') {
+        lines.pop();
+    }
+
+    for (segment, line_start_char) in lines {
+        let content = segment.strip_suffix('\r').unwrap_or(segment);
+        if is_title(content, re) {
+            if seen_title {
+                chapters.push(ChapterInfo {
+                    index: chapters.len(),
+                    title: current_title.clone(),
+                    offset: base + (current_start * 2) as u64,
+                    length: ((line_start_char - current_start) * 2) as u64,
+                });
+            }
+            current_title = content.trim().to_string();
+            current_start = line_start_char;
+            seen_title = true;
+        }
+    }
+
+    chapters.push(ChapterInfo {
+        index: chapters.len(),
+        title: current_title,
+        offset: base + (current_start * 2) as u64,
+        length: ((text.chars().count() - current_start) * 2) as u64,
+    });
+    chapters
+}
+
+/// 用已知编码解码字节；非法字节用替换字符，不返回 Err。
+fn decode_with(bytes: &[u8], encoding: DetectedEncoding) -> String {
+    let (text, _, _) = match encoding {
+        DetectedEncoding::Utf8 => encoding_rs::UTF_8.decode(bytes),
+        DetectedEncoding::Utf16Le => encoding_rs::UTF_16LE.decode(bytes),
+        DetectedEncoding::Utf16Be => encoding_rs::UTF_16BE.decode(bytes),
+        DetectedEncoding::Gbk => encoding_rs::GBK.decode(bytes),
+    };
+    text.into_owned()
+}
+
+fn is_title(line: &str, re: &Regex) -> bool {
+    let trimmed = line.trim();
+    !trimmed.is_empty() && re.is_match(trimmed)
 }
 
 impl BookFormat for TxtBook {
@@ -129,7 +251,7 @@ impl BookFormat for TxtBook {
         file.seek(SeekFrom::Start(ch.offset))?;
         let mut buf = vec![0u8; ch.length as usize];
         file.read_exact(&mut buf)?;
-        decode_bytes(&buf)
+        Ok(decode_with(&buf, self.encoding))
     }
 }
 
@@ -192,6 +314,30 @@ mod tests {
         assert_eq!(book.encoding(), DetectedEncoding::Gbk);
         assert_eq!(book.chapter_list().len(), 3);
         assert!(book.chapter_text(0).unwrap().contains("内容一"));
+        let chapter_one = book.chapter_text(1).unwrap();
+        assert!(chapter_one.contains("内容三。"));
+        assert!(!chapter_one.contains("第一章"));
+    }
+
+    #[test]
+    fn gbk_single_chapter_reads_whole_text() {
+        use encoding_rs::GBK;
+        let (bytes, _, _) = GBK.encode("没有任何章节标记的普通文本。\n第二行。");
+        let f = write_tmp(&bytes.into_owned());
+        let book = TxtBook::open(f.path(), None).unwrap();
+        let text = book.chapter_text(0).unwrap();
+        assert!(text.contains("没有任何章节标记的普通文本。"));
+        assert!(text.contains("第二行。"));
+    }
+
+    #[test]
+    fn crlf_utf8_parses_two_chapters() {
+        let f = write_tmp("第一章 甲\r\n内容。\r\n第二章 乙\r\n内容。\r\n".as_bytes());
+        let book = TxtBook::open(f.path(), None).unwrap();
+        assert_eq!(book.chapter_list().len(), 2);
+        let text = book.chapter_text(1).unwrap();
+        assert!(text.contains("内容。"));
+        assert!(!text.contains("第一章"));
     }
 
     #[test]
