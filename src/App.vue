@@ -1,4 +1,4 @@
 <template>
-  <div id="app">Reader</div>
+  <router-view />
 </template>
 <script setup lang="ts"></script>
