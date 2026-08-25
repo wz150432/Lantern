@@ -15,6 +15,25 @@
 - 窗口：全屏（F11）、沉浸模式（F12）、窗口置顶（Ctrl+T）、透明度调节（Ctrl+滚轮）
 - 稳定性：文件缺失不崩溃、library.db 删除后自动重建空库
 
+## 环境准备（系统依赖）
+
+Tauri v2 需要系统的 WebView 依赖。CI 使用 Ubuntu；本地开发按你的发行版安装。
+
+**Arch Linux（pacman，本机）**
+```bash
+sudo pacman -S --needed base-devel webkit2gtk-4.1 gtk3 libayatana-appindicator librsvg patchelf
+# Rust 工具链：curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+# Node：sudo pacman -S nodejs npm
+```
+
+**Ubuntu / Debian（CI 运行器）**
+```bash
+sudo apt install libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+```
+
+**Windows**：Visual Studio 2022 Build Tools（勾选"使用 C++ 的桌面开发"，含 MSVC v143 + Windows SDK）+ WebView2 运行时。
+
+**macOS**：Xcode Command Line Tools（xcode-select --install）。
 ## 开发
 
 ```bash
