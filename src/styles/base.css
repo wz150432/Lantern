@@ -9,4 +9,5 @@
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body, #app { height: 100%; }
-body { font-family: var(--reader-font-family); background: var(--bg); color: var(--text); user-select: text; }
+html, body { background: transparent; }
+body { font-family: var(--reader-font-family); color: var(--text); user-select: text; }

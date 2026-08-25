@@ -39,7 +39,8 @@ const pct = computed(() => Math.round(props.book.progress * 100))
   padding: 6px 2px;
 }
 .title {
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

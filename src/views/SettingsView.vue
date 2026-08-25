@@ -110,7 +110,7 @@ onMounted(() => {
     <section v-if="settings.settings" class="group">
       <h2>{{ zh.settings.window }}</h2>
       <label><input type="checkbox" :checked="settings.settings.windowTopmost" @change="patch({ windowTopmost: ($event.target as HTMLInputElement).checked })" /> {{ zh.settings.windowTopmost }}</label>
-      <label>{{ zh.settings.windowOpacity }} <input type="range" min="0.3" max="1" step="0.05" :value="settings.settings.windowOpacity" @input="onOpacity(Number(($event.target as HTMLInputElement).value))" /></label>
+      <label>{{ zh.settings.windowOpacity }} <input type="range" min="0.1" max="1" step="0.05" :value="settings.settings.windowOpacity" @input="onOpacity(Number(($event.target as HTMLInputElement).value))" /></label>
       <label><input type="checkbox" :checked="settings.settings.immersiveMode" @change="patch({ immersiveMode: ($event.target as HTMLInputElement).checked })" /> {{ zh.settings.immersiveMode }}</label>
     </section>
 
@@ -123,7 +123,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.settings-page { height: 100%; overflow-y: auto; padding: 24px 40px; }
+.settings-page { height: 100%; overflow-y: auto; padding: 24px 40px; background: var(--bg); }
 .settings-head { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
 .group { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; }
 .group h2 { font-size: 15px; margin-bottom: 12px; color: var(--text-dim); }

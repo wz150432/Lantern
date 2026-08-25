@@ -1,10 +1,9 @@
 <script setup lang="ts">
-const props = defineProps<{ title: string }>()
-const hue = [...props.title].reduce((a, c) => a + c.charCodeAt(0), 0) % 360
+defineProps<{ title: string }>()
 </script>
 
 <template>
-  <div class="cover" :style="{ background: `linear-gradient(135deg, hsl(${hue} 35% 45%), hsl(${(hue + 40) % 360} 40% 30%))` }">
+  <div class="cover">
     <span class="cover-title">{{ title }}</span>
   </div>
 </template>
@@ -18,10 +17,11 @@ const hue = [...props.title].reduce((a, c) => a + c.charCodeAt(0), 0) % 360
   align-items: flex-start;
   justify-content: center;
   padding: 24px 12px 10px;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 62%, #000));
 }
 .cover-title {
-  color: rgba(255, 255, 255, 0.95);
-  font-size: 14px;
+  color: var(--panel);
+  font-size: 15px;
   font-weight: 600;
   line-height: 1.4;
   width: 100%;

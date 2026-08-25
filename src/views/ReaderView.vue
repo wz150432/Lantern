@@ -5,7 +5,7 @@ import { useReaderStore } from '../stores/reader'
 import { useSettingsStore } from '../stores/settings'
 import { useLibraryStore } from '../stores/library'
 import { toParagraphs } from '../reader/text'
-import { pageCount, pageIndexFromScroll, scrollLeftFromPage } from '../reader/pagination'
+import { pageCount, pageIndexFromScroll, scrollLeftFromPage, columnAdvance } from '../reader/pagination'
 import { streamCharPosition } from '../reader/stream'
 import { useHotkeys } from '../composables/useHotkeys'
 import { zh } from '../i18n/zh'
@@ -68,11 +68,7 @@ function pageWidth(): number {
   const el = scrollEl.value
   if (!el) return 0
   const padding = settings.settings?.innerPadding ?? 48
-  const totalWidth = el.clientWidth - padding * 2
-  const colW = settings.settings?.pageDouble
-    ? Math.max(100, (totalWidth - COLUMN_GAP) / 2)
-    : Math.max(100, totalWidth)
-  return colW + COLUMN_GAP
+  return columnAdvance(el.clientWidth, padding, COLUMN_GAP, !!settings.settings?.pageDouble)
 }
 
 function applyColumns() {
@@ -322,11 +318,16 @@ function zoom(delta: number) {
 }
 
 function onWheel(e: WheelEvent) {
-  // Ctrl/Alt + 滚轮：调整窗口透明度（CSS 层面生效）
+  // Ctrl/Alt + 滚轮：背景透明度微调；Ctrl+Shift+滚轮：一键全透明 / 还原
   if (e.ctrlKey || e.altKey) {
     e.preventDefault()
     const s = settings.settings!
-    const next = Math.min(1, Math.max(0.3, s.windowOpacity + (e.deltaY > 0 ? -0.05 : 0.05)))
+    let next: number
+    if (e.ctrlKey && e.shiftKey) {
+      next = s.windowOpacity >= 0.5 ? 0.12 : 1.0
+    } else {
+      next = Math.min(1, Math.max(0.12, s.windowOpacity + (e.deltaY > 0 ? -0.05 : 0.05)))
+    }
     void settings.update({ windowOpacity: next })
     void ipc.setOpacity(next).catch(() => { /* ignore */ })
     return

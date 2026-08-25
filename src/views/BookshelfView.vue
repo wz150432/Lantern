@@ -104,6 +104,7 @@ onMounted(async () => {
   flex-direction: column;
   padding: 24px 32px;
   gap: 16px;
+  background: var(--bg);
 }
 .shelf-header {
   display: flex;
