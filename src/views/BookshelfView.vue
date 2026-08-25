@@ -5,6 +5,7 @@ import { open as dialogOpen } from '@tauri-apps/plugin-dialog'
 import { revealItemInDir } from '@tauri-apps/plugin-opener'
 import { useLibraryStore } from '../stores/library'
 import { useSettingsStore } from '../stores/settings'
+import { useHotkeys } from '../composables/useHotkeys'
 import BookCard from '../components/BookCard.vue'
 import type { BookRecord } from '../types'
 import { zh } from '../i18n/zh'
@@ -44,7 +45,7 @@ async function onImport() {
   await lib.importBook(path, mode)
 }
 
-async function onOpenFile() {
+async function pickAndOpen() {
   const path = await pickBookPath()
   if (!path) return
   const opened = await lib.open(path)
@@ -64,6 +65,8 @@ async function showInFolder(book: BookRecord) {
   await revealItemInDir(book.filePath)
 }
 
+useHotkeys({ openFile: pickAndOpen })
+
 onMounted(async () => {
   await settings.load()
   await lib.refresh()
@@ -77,7 +80,7 @@ onMounted(async () => {
       <div class="tools">
         <input v-model="keyword" class="search" :placeholder="zh.shelf.searchPlaceholder" />
         <button class="btn primary" @click="onImport">{{ zh.shelf.importBook }}</button>
-        <button class="btn" @click="onOpenFile">{{ zh.shelf.openFile }}</button>
+        <button class="btn" @click="pickAndOpen">{{ zh.shelf.openFile }}</button>
         <button class="btn" @click="router.push('/settings')">{{ zh.settings.title }}</button>
       </div>
     </header>

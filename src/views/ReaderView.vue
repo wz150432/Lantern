@@ -227,13 +227,21 @@ function onWheel(e: WheelEvent) {
   void ipc.setOpacity(next).catch(() => { /* ignore */ })
 }
 
+async function pickAndOpen() {
+  const { open } = await import('@tauri-apps/plugin-dialog')
+  const picked = await open({ multiple: false, filters: [{ name: zh.shelf.bookFilter, extensions: ['txt'] }] })
+  if (!picked) return
+  const rec = await lib.open(picked as string)
+  router.push({ path: '/reader', query: { id: String(rec.id) } })
+}
+
 useHotkeys({
   nextPage, prevPage,
   nextChapter: () => void reader.nextChapter().then(resetScrollToTop),
   prevChapter: () => void reader.prevChapter().then(resetScrollToTop),
   toggleFullscreen, toggleImmersive, toggleAutoPage, toggleSearch, jumpPercent,
   addBookmark: () => void reader.addBookmarkHere(),
-  openFile: () => void router.push('/'),
+  openFile: pickAndOpen,
   zoomIn: () => zoom(1), zoomOut: () => zoom(-1), toggleTopmost,
 })
 
