@@ -12,7 +12,7 @@ export const zh = {
     search: '查找', searchButton: '搜索', searchPlaceholder: '输入关键字…', searchPrev: '上一个', searchNext: '下一个', noResult: '没有找到匹配内容',
     progress: '进度', jumpPlaceholder: '输入跳转百分比（0-100）', bookmarkAdded: '已添加书签', hideBorder: '隐藏边框', showBorder: '显示边框', editMode: '编辑模式',
     fileMissing: '文件缺失', relocate: '重新定位文件',
-    fullscreen: '全屏', immersive: '沉浸', autoStart: '自动', autoStop: '停止', addBookmark: '书签',
+    fullscreen: '全屏', immersive: '沉浸', exitImmersive: '退出沉浸', autoStart: '自动', autoStop: '停止', addBookmark: '书签',
     noBookmarks: '暂无书签（Ctrl+M 添加）',
   },
   settings: {
@@ -24,7 +24,7 @@ export const zh = {
     pageModePage: '翻页', pageModeScroll: '滚动', autoPageInterval: '自动翻页间隔(ms)',
     clickMode: '点击翻页方式', clickThirds: '左右区域', clickLeftRight: '左键下页/右键上页',
     scrollSpeed: '滚动速度', windowTopmost: '窗口置顶', windowOpacity: '窗口透明度',
-    immersiveMode: '隐藏顶栏/底栏（阅读页 F12 为隐藏系统边框）', restoreDefault: '还原默认设置', about: '关于',
+    immersiveMode: '沉浸模式（F12 隐藏顶栏/底栏）', pageDouble: '翻页双页（左右双页）', restoreDefault: '还原默认设置', about: '关于',
     preview: '排版预览', resetConfirm: '确定要还原默认设置吗？',
     fontSystem: '系统默认', fontSerif: '思源宋体', fontNotoSerif: 'Noto Serif',
     previewChapter: '第一章 预览', previewBody: '这是排版预览文本，用于实时查看行距、段距、字号与首行缩进的效果。点击设置即刻生效。',

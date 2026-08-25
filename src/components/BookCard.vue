@@ -1,16 +1,12 @@
 <script setup lang="ts">
 import type { BookRecord } from '../types'
 import CoverPlaceholder from './CoverPlaceholder.vue'
-import { zh } from '../i18n/zh'
 
-const props = defineProps<{ book: BookRecord; showActions?: boolean }>()
-const emit = defineEmits<{
-  open: [BookRecord]
-  addToShelf: [BookRecord]
-  remove: [BookRecord]
-  showInFolder: [BookRecord]
-}>()
-const pct = Math.round(props.book.progress * 100)
+import { computed } from 'vue'
+
+const props = defineProps<{ book: BookRecord }>()
+const emit = defineEmits<{ open: [BookRecord] }>()
+const pct = computed(() => Math.round(props.book.progress * 100))
 </script>
 
 <template>
@@ -19,12 +15,8 @@ const pct = Math.round(props.book.progress * 100)
     <img v-else :src="`asset://localhost/${book.coverPath}`" class="cover-img" alt="" />
     <div class="info">
       <div class="title" :title="book.title">{{ book.title }}</div>
+      <div class="meta"><span class="pct">{{ pct }}%</span></div>
       <div class="progress"><div class="bar" :style="{ width: pct + '%' }"></div></div>
-    </div>
-    <div v-if="showActions" class="actions">
-      <button @click.stop="emit('addToShelf', book)">{{ zh.shelf.addToShelf }}</button>
-      <button @click.stop="emit('remove', book)">{{ zh.shelf.remove }}</button>
-      <button @click.stop="emit('showInFolder', book)">{{ zh.shelf.showInFolder }}</button>
     </div>
   </div>
 </template>
@@ -34,6 +26,14 @@ const pct = Math.round(props.book.progress * 100)
   position: relative;
   width: 140px;
   cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.book-card:hover {
+  transform: translateY(-2px);
+}
+.book-card:hover .cover,
+.book-card:hover .cover-img {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 .info {
   padding: 6px 2px;
@@ -44,37 +44,25 @@ const pct = Math.round(props.book.progress * 100)
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.meta {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+.pct {
+  font-size: 11px;
+  color: var(--text-dim);
+}
 .progress {
   height: 3px;
   background: var(--border);
   border-radius: 2px;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 .bar {
   height: 100%;
   background: var(--accent);
   border-radius: 2px;
-}
-.actions {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  border-radius: 8px;
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.book-card:hover .actions {
-  display: flex;
-}
-.actions button {
-  padding: 4px 10px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
 }
 .cover-img {
   width: 100%;

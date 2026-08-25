@@ -104,6 +104,7 @@ onMounted(() => {
           <option value="left-right">{{ zh.settings.clickLeftRight }}</option>
         </select>
       </label>
+      <label><input type="checkbox" :checked="settings.settings.pageDouble" @change="patch({ pageDouble: ($event.target as HTMLInputElement).checked })" /> {{ zh.settings.pageDouble }}</label>
     </section>
 
     <section v-if="settings.settings" class="group">

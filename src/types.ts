@@ -30,6 +30,7 @@ export interface AppSettings {
   pageMode: 'page' | 'scroll'
   autoPageIntervalMs: number
   clickMode: 'thirds' | 'left-right'
+  pageDouble: boolean
   windowTopmost: boolean
   windowOpacity: number
   immersiveMode: boolean

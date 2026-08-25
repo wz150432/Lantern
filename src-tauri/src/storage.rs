@@ -183,6 +183,9 @@ impl Storage {
         if let Some(v) = parsed.get("clickMode") {
             merged.click_mode = v.as_str().unwrap_or("thirds").into();
         }
+        if let Some(v) = parsed.get("pageDouble") {
+            merged.page_double = v.as_bool().unwrap_or(false);
+        }
         if let Some(v) = parsed.get("windowTopmost") {
             merged.window_topmost = v.as_bool().unwrap_or(false);
         }

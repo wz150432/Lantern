@@ -43,7 +43,8 @@ let lastWheelTurn = 0
 let hideButtonMask = 0
 const streamTexts = ref<string[]>([])
 const streamIndices = ref<number[]>([])
-const decorated = ref(true)
+const showTopBar = ref(false)
+const showBottomBar = ref(false)
 
 function showToast(msg: string) {
   toast.value = msg
@@ -67,8 +68,11 @@ function pageWidth(): number {
   const el = scrollEl.value
   if (!el) return 0
   const padding = settings.settings?.innerPadding ?? 48
-  const contentWidth = el.clientWidth - padding * 2
-  return Math.max(100, contentWidth) + COLUMN_GAP
+  const totalWidth = el.clientWidth - padding * 2
+  const colW = settings.settings?.pageDouble
+    ? Math.max(100, (totalWidth - COLUMN_GAP) / 2)
+    : Math.max(100, totalWidth)
+  return colW + COLUMN_GAP
 }
 
 function applyColumns() {
@@ -77,8 +81,11 @@ function applyColumns() {
   if (settings.settings?.pageMode === 'page') {
     el.classList.add('page-mode')
     const padding = settings.settings?.innerPadding ?? 48
-    const contentWidth = el.clientWidth - padding * 2
-    el.style.columnWidth = `${Math.max(100, contentWidth)}px`
+    const totalWidth = el.clientWidth - padding * 2
+    const colW = settings.settings?.pageDouble
+      ? Math.max(100, (totalWidth - COLUMN_GAP) / 2)
+      : Math.max(100, totalWidth)
+    el.style.columnWidth = `${colW}px`
   } else {
     el.classList.remove('page-mode')
     el.style.columnWidth = ''
@@ -249,9 +256,9 @@ async function toggleFullscreen() {
 }
 
 async function toggleImmersive() {
-  // F12：切换系统窗口边框（标题栏），不影响应用内顶栏
-  decorated.value = !decorated.value
-  await ipc.setDecorations(decorated.value)
+  // F12：隐藏/显示应用内顶栏与底栏（系统边框已在配置中永久隐藏）
+  const next = !settings.settings!.immersiveMode
+  await settings.update({ immersiveMode: next })
 }
 
 async function toggleTopmost() {
@@ -392,6 +399,17 @@ useHotkeys({
   zoomIn: () => zoom(1), zoomOut: () => zoom(-1), toggleTopmost,
 })
 
+function onReaderMouseMove(e: MouseEvent) {
+  if (!settings.settings?.immersiveMode) return
+  const el = scrollEl.value
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  const y = e.clientY - rect.top
+  const edge = 56
+  showTopBar.value = y < edge
+  showBottomBar.value = y > rect.height - edge
+}
+
 function onReaderClick(e: MouseEvent) {
   const el = scrollEl.value
   if (!el) return
@@ -410,7 +428,7 @@ function onReaderContextMenu(e: MouseEvent) {
 }
 
 watch(
-  () => [settings.settings?.pageMode, settings.settings?.innerPadding],
+  () => [settings.settings?.pageMode, settings.settings?.innerPadding, settings.settings?.pageDouble],
   () => { void nextTick(applyColumns) },
 )
 
@@ -465,7 +483,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="reader" :class="{ immersive: settings.settings?.immersiveMode }" @mousedown="onReaderMouseDown" @mouseup="onReaderMouseUp">
+  <div class="reader" :class="{ immersive: settings.settings?.immersiveMode, 'show-top': showTopBar, 'show-bottom': showBottomBar }" @mousedown="onReaderMouseDown" @mouseup="onReaderMouseUp" @mousemove="onReaderMouseMove">
     <header class="topbar" data-tauri-drag-region>
       <button class="link" @click="router.push('/')">{{ zh.reader.back }}</button>
       <span class="chapter-title">{{ reader.chapters[reader.currentChapter]?.title ?? '' }}</span>
@@ -474,7 +492,7 @@ onBeforeUnmount(() => {
         <button @click="showBookmarks = !showBookmarks">{{ zh.reader.bookmarks }}</button>
         <button @click="toggleSearch">{{ zh.reader.search }}</button>
         <button @click="toggleFullscreen">{{ zh.reader.fullscreen }}</button>
-        <button @click="toggleImmersive">{{ decorated ? zh.reader.hideBorder : zh.reader.showBorder }}</button>
+        <button @click="toggleImmersive">{{ settings.settings?.immersiveMode ? zh.reader.exitImmersive : zh.reader.immersive }}</button>
         <button @click="router.push('/settings')">{{ zh.settings.title }}</button>
       </div>
     </header>
@@ -528,7 +546,6 @@ onBeforeUnmount(() => {
       <button @click="reader.prevChapter()">{{ zh.reader.prevChapter }}</button>
       <button @click="toggleAutoPage">{{ reader.autoPageOn ? zh.reader.autoStop : zh.reader.autoStart }}</button>
       <button @click="addBookmarkWithFeedback()">{{ zh.reader.addBookmark }}</button>
-      <button @click="openJump">{{ zh.reader.progress }}</button>
       <button @click="reader.nextChapter()">{{ zh.reader.nextChapter }}</button>
     </footer>
   </div>
@@ -582,8 +599,8 @@ onBeforeUnmount(() => {
   cursor: pointer;
   font-size: 13px;
 }
-.immersive .topbar,
-.immersive .bottombar {
+.immersive:not(.show-top) .topbar,
+.immersive:not(.show-bottom) .bottombar {
   display: none;
 }
 .reader-scroll {

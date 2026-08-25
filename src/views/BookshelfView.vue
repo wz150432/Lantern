@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ask, open as dialogOpen } from '@tauri-apps/plugin-dialog'
-import { revealItemInDir } from '@tauri-apps/plugin-opener'
 import { useLibraryStore } from '../stores/library'
 import { useSettingsStore } from '../stores/settings'
 import { useHotkeys } from '../composables/useHotkeys'
@@ -57,25 +56,6 @@ async function pickAndOpen() {
   router.push({ path: '/reader', query: { id: String(opened.id) } })
 }
 
-async function onRemove(book: BookRecord) {
-  const deleteCopy = book.storageMode === 'copied' &&
-    (await ask(zh.shelf.deleteCopyPrompt, {
-      title: zh.shelf.remove,
-      kind: 'warning',
-      okLabel: zh.common.confirm,
-      cancelLabel: zh.common.cancel,
-    }))
-  void lib.remove(book.id, deleteCopy)
-}
-
-function onAddToShelf(book: BookRecord) {
-  void onOpen(book)
-}
-
-async function showInFolder(book: BookRecord) {
-  await revealItemInDir(book.filePath)
-}
-
 useHotkeys({ openFile: pickAndOpen })
 
 onMounted(async () => {
@@ -110,11 +90,7 @@ onMounted(async () => {
         v-for="b in filtered"
         :key="b.id"
         :book="b"
-        show-actions
         @open="onOpen"
-        @add-to-shelf="onAddToShelf"
-        @remove="onRemove"
-        @show-in-folder="showInFolder"
       />
     </main>
     <p v-if="lib.books.length === 0" class="empty">{{ zh.shelf.empty }}</p>

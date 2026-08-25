@@ -15,14 +15,17 @@ const hue = [...props.title].reduce((a, c) => a + c.charCodeAt(0), 0) % 360
   aspect-ratio: 3 / 4;
   border-radius: 8px;
   display: flex;
-  align-items: flex-end;
-  padding: 10px;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 12px 10px;
 }
 .cover-title {
   color: rgba(255, 255, 255, 0.95);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.4;
+  width: 100%;
+  text-align: center;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
