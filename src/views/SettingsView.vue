@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useSettingsStore } from '../stores/settings'
 import { THEME_PRESETS } from '../theme/theme'
 import { zh } from '../i18n/zh'
+import * as ipc from '../ipc'
 import type { AppSettings } from '../types'
 
 const router = useRouter()
@@ -11,6 +12,14 @@ const settings = useSettingsStore()
 
 function patch(p: Partial<AppSettings>) {
   void settings.update(p)
+}
+
+async function onOpacity(v: number) {
+  patch({ windowOpacity: v })
+  // 平台限制：macOS/Linux 整窗透明支持有限，此处仅尽力持久化设置，失败忽略（R6）
+  try {
+    await ipc.setOpacity(v)
+  } catch { /* ignore */ }
 }
 
 function restore() {
@@ -85,7 +94,7 @@ onMounted(() => {
     <section v-if="settings.settings" class="group">
       <h2>{{ zh.settings.window }}</h2>
       <label><input type="checkbox" :checked="settings.settings.windowTopmost" @change="patch({ windowTopmost: ($event.target as HTMLInputElement).checked })" /> {{ zh.settings.windowTopmost }}</label>
-      <label>{{ zh.settings.windowOpacity }} <input type="range" min="0.3" max="1" step="0.05" :value="settings.settings.windowOpacity" @input="patch({ windowOpacity: Number(($event.target as HTMLInputElement).value) })" /></label>
+      <label>{{ zh.settings.windowOpacity }} <input type="range" min="0.3" max="1" step="0.05" :value="settings.settings.windowOpacity" @input="onOpacity(Number(($event.target as HTMLInputElement).value))" /></label>
       <label><input type="checkbox" :checked="settings.settings.immersiveMode" @change="patch({ immersiveMode: ($event.target as HTMLInputElement).checked })" /> {{ zh.settings.immersiveMode }}</label>
     </section>
 

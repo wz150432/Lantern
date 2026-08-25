@@ -159,7 +159,9 @@ async function toggleFullscreen() {
 async function toggleImmersive() {
   const next = !settings.settings!.immersiveMode
   await settings.update({ immersiveMode: next })
-  await ipc.setDecorations(!next)
+  // 退出沉浸恢复装饰；透明度 < 1 时保留窗口装饰（macOS 透明 + 无边框组合受限，属已知降级）
+  const decorated = !next || settings.settings!.windowOpacity < 1
+  await ipc.setDecorations(decorated)
 }
 
 async function toggleTopmost() {
@@ -212,6 +214,17 @@ function jumpPercent() {
 function zoom(delta: number) {
   const s = settings.settings!
   void settings.update({ fontSize: Math.min(48, Math.max(10, s.fontSize + delta)) })
+}
+
+function onWheel(e: WheelEvent) {
+  // Ctrl/Alt + 滚轮调整窗口透明度（v0.1 统一按同一行为处理）
+  if (!e.ctrlKey && !e.altKey) return
+  e.preventDefault()
+  const s = settings.settings!
+  const next = Math.min(1, Math.max(0.3, s.windowOpacity + (e.deltaY > 0 ? -0.05 : 0.05)))
+  void settings.update({ windowOpacity: next })
+  // R6：v0.1 不实际改变窗口透明度，尽力持久化设置，失败忽略
+  void ipc.setOpacity(next).catch(() => { /* ignore */ })
 }
 
 useHotkeys({
@@ -315,7 +328,7 @@ onBeforeUnmount(() => {
       ref="scrollEl"
       class="reader-scroll"
       :class="{ scroll: settings.settings?.pageMode === 'scroll' }"
-      @click="onReaderClick"
+      @click="onReaderClick" @wheel="onWheel"
       @contextmenu="onReaderContextMenu"
       @scroll="syncProgressFromScroll"
     >
