@@ -23,3 +23,4 @@ export function setTopmost(top: boolean): Promise<void> { return invokeBook<void
 export function setOpacity(opacity: number): Promise<void> { return invokeBook<void>('set_opacity', { opacity }) }
 export function setDecorations(decorated: boolean): Promise<void> { return invokeBook<void>('set_decorations', { decorated }) }
 export function toggleWindowVisible(): Promise<void> { return invokeBook<void>('toggle_window_visible') }
+export function exitApp(): Promise<void> { return invokeBook<void>('exit_app') }

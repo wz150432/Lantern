@@ -30,7 +30,7 @@ export const zh = {
     previewChapter: '第一章 预览', previewBody: '这是排版预览文本，用于实时查看行距、段距、字号与首行缩进的效果。点击设置即刻生效。',
     version: 'v0.1.0',
   },
-  common: { confirm: '确定', cancel: '取消', delete: '删除', close: '关闭' },
+  common: { confirm: '确定', cancel: '取消', delete: '删除', close: '关闭', exit: '退出' },
 }
 export type ZhDict = typeof zh
 

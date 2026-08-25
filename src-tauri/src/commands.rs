@@ -215,6 +215,12 @@ pub fn toggle_window_visible(window: Window) -> AppResult<()> {
 }
 
 #[tauri::command]
+pub fn exit_app(app: tauri::AppHandle) -> AppResult<()> {
+    app.exit(0);
+    Ok(())
+}
+
+#[tauri::command]
 pub fn set_decorations(window: Window, decorated: bool) -> AppResult<()> {
     window
         .set_decorations(decorated)

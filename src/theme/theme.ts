@@ -50,5 +50,9 @@ export function applyTheme(settings: AppSettings) {
   root.style.setProperty('--reader-word-wrap', settings.wordWrap ? 'break-word' : 'normal')
   const preset0 = THEME_PRESETS.find((p) => p.id === settings.theme) ?? THEME_PRESETS[0]
   const bg = preset0.vars['--reader-bg'] ?? '#f5f4f1'
+  const panel = preset0.vars['--panel'] ?? '#ffffff'
+  const bgBase = preset0.vars['--bg'] ?? '#faf9f7'
   root.style.setProperty('--reader-bg-rgba', hexToRgba(bg, settings.windowOpacity))
+  root.style.setProperty('--panel-rgba', hexToRgba(panel, settings.windowOpacity))
+  root.style.setProperty('--bg-rgba', hexToRgba(bgBase, settings.windowOpacity))
 }

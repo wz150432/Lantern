@@ -495,6 +495,7 @@ onBeforeUnmount(() => {
         <button @click="toggleFullscreen">{{ zh.reader.fullscreen }}</button>
         <button @click="toggleImmersive">{{ settings.settings?.immersiveMode ? zh.reader.exitImmersive : zh.reader.immersive }}</button>
         <button @click="router.push('/settings')">{{ zh.settings.title }}</button>
+        <button class="danger" @click="ipc.exitApp()">{{ zh.common.exit }}</button>
       </div>
     </header>
 
@@ -566,7 +567,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 16px;
   padding: 10px 20px;
-  background: var(--panel);
+  background: var(--panel-rgba, var(--panel));
   border-bottom: 1px solid var(--border);
   z-index: 20;
 }
@@ -589,6 +590,10 @@ onBeforeUnmount(() => {
 .top-actions {
   display: flex;
   gap: 8px;
+}
+.top-actions button.danger,
+.bottombar button.danger {
+  color: #c0392b;
 }
 .top-actions button,
 .bottombar button {
@@ -646,7 +651,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 12px;
   padding: 8px 20px;
-  background: var(--panel);
+  background: var(--panel-rgba, var(--panel));
   border-top: 1px solid var(--border);
 }
 .bottombar .pct {
@@ -695,7 +700,7 @@ onBeforeUnmount(() => {
   bottom: 44px;
   left: 0;
   width: 280px;
-  background: var(--panel);
+  background: var(--panel-rgba, var(--panel));
   border-right: 1px solid var(--border);
   z-index: 10;
   display: flex;

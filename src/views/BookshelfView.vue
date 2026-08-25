@@ -5,6 +5,7 @@ import { ask, open as dialogOpen } from '@tauri-apps/plugin-dialog'
 import { useLibraryStore } from '../stores/library'
 import { useSettingsStore } from '../stores/settings'
 import { useHotkeys } from '../composables/useHotkeys'
+import * as ipc from '../ipc'
 import BookCard from '../components/BookCard.vue'
 import type { BookRecord } from '../types'
 import { zh } from '../i18n/zh'
@@ -73,6 +74,7 @@ onMounted(async () => {
         <button class="btn primary" @click="onImport">{{ zh.shelf.importBook }}</button>
         <button class="btn" @click="pickAndOpen">{{ zh.shelf.openFile }}</button>
         <button class="btn" @click="router.push('/settings')">{{ zh.settings.title }}</button>
+        <button class="btn" @click="ipc.exitApp()">{{ zh.common.exit }}</button>
       </div>
     </header>
     <nav class="filters">

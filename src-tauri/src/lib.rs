@@ -74,6 +74,7 @@ pub fn run() {
             commands::set_opacity,
             commands::set_decorations,
             commands::toggle_window_visible,
+            commands::exit_app,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
